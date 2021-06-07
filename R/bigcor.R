@@ -5,21 +5,46 @@
 #' @param verbose report whats going on
 #'
 #' @export
-bigcor <- function(x, nblocks = 10, verbose = TRUE, ...)
+bigcor <- function(
+  x,
+  y = NULL,
+  fun = c("cor", "cov"),
+  size = 2000,
+  verbose = TRUE,
+  ...)
 {
-  library(ff, quietly = TRUE)
+  fun <- match.arg(fun)
+  if (fun == "cor") FUN <- cor else FUN <- cov
+  if (fun == "cor") STR <- "Correlation" else STR <- "Covariance"
+  if (!is.null(y) & NROW(x) != NROW(y)) stop("'x' and 'y' must have compatible dimensions!")
+
   NCOL <- ncol(x)
-  ## test if ncol(x) %% nblocks gives remainder 0
-  if (NCOL %% nblocks != 0) stop("Choose different 'nblocks' so that ncol(x) %% nblocks = 0!")
+  if (!is.null(y)) YCOL <- NCOL(y)
+
+  ## calculate remainder, largest 'size'-divisible integer and block size
+  REST <- NCOL %% size
+  LARGE <- NCOL - REST
+  NBLOCKS <- NCOL %/% size
+
   ## preallocate square matrix of dimension
   ## ncol(x) in 'ff' single format
-  corMAT <- ff(vmode = "single", dim = c(NCOL, NCOL))
-  ## split column numbers into 'nblocks' groups
-  SPLIT <- split(1:NCOL, rep(1:nblocks, each = NCOL/nblocks))
+  if (is.null(y)) resMAT <- ff(vmode = "double", dim = c(NCOL, NCOL))
+  else resMAT <- ff(vmode = "double", dim = c(NCOL, YCOL))
+
+  ## split column numbers into 'nblocks' groups + remaining block
+  GROUP <- rep(1:NBLOCKS, each = size)
+  if (REST > 0) GROUP <- c(GROUP, rep(NBLOCKS + 1, REST))
+  SPLIT <- split(1:NCOL, GROUP)
+
   ## create all unique combinations of blocks
   COMBS <- expand.grid(1:length(SPLIT), 1:length(SPLIT))
   COMBS <- t(apply(COMBS, 1, sort))
   COMBS <- unique(COMBS)
+  if (!is.null(y)) COMBS <- cbind(1:length(SPLIT), rep(1, length(SPLIT)))
+
+  ## initiate time counter
+  timeINIT <- proc.time()
+
   ## iterate through each block combination, calculate correlation matrix
   ## between blocks and store them in the preallocated matrix on both
   ## symmetric sides of the diagonal
@@ -27,13 +52,29 @@ bigcor <- function(x, nblocks = 10, verbose = TRUE, ...)
     COMB <- COMBS[i, ]
     G1 <- SPLIT[[COMB[1]]]
     G2 <- SPLIT[[COMB[2]]]
-    if (verbose) cat("Block", COMB[1], "with Block", COMB[2], "\n")
-    flush.console()
-    COR <- cor(MAT[, G1], MAT[, G2], ...)
-    corMAT[G1, G2] <- COR
-    corMAT[G2, G1] <- t(COR)
-    COR <- NULL
+
+    ## if y = NULL
+    if (is.null(y)) {
+      if (verbose) message("bigcor: ", sprintf("#%d: %s of Block %s and Block %s (%s x %s) ... ",
+                                               i, STR,  COMB[1], COMB[2], length(G1),  length(G2)))
+      RES <- FUN(x[, G1], x[, G2], ...)
+      resMAT[G1, G2] <- RES
+      resMAT[G2, G1] <- t(RES)
+    } else ## if y = smaller matrix or vector
+    {
+      if (verbose) message("bigcor: ", sprintf("#%d: %s of Block %s and 'y' (%s x %s) ... ", i, STR,  COMB[1],
+                                               length(G1),  YCOL))
+      RES <- FUN(x[, G1], y, ...)
+      resMAT[G1, ] <- RES
+    }
+
+    if (verbose) {
+      timeNOW <- proc.time() - timeINIT
+      message("bigcor: ", round(timeNOW[3], 2), " sec\n")
+    }
+
+    gc()
   }
-  gc()
-  return(corMAT)
+
+  return(resMAT)
 }

@@ -4,14 +4,14 @@
 \alias{bigcor}
 \title{large correlation matrix with ff}
 \usage{
-bigcor(x, nblocks = 10, verbose = TRUE, ...)
+bigcor(x, y = NULL, fun = c("cor", "cov"), size = 2000, verbose = TRUE, ...)
 }
 \arguments{
 \item{x}{the matrix}
 
-\item{nblocks}{required to be factor of ncols x}
-
 \item{verbose}{report whats going on}
+
+\item{nblocks}{required to be factor of ncols x}
 }
 \description{
 developed by anspiess: https://www.r-bloggers.com/2013/02/bigcor-large-correlation-matrices-in-r/
