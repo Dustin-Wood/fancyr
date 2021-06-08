@@ -1,10 +1,11 @@
-#' Correlation Matrix with all Reflected (or Reversed) Correlations included
+#' Correlation Matrix - Doubled w/ Reflections
 #' @description
-#' This is particularly useful for cluster analysis, where you can
-#' include all reverse-scored variables to force the clusters to include
-#' antonymous content (e.g., 'outgoing' and 'shy' may be on the same cluster)
-#' @param  corrs Correlation matrix to reflect (or to include all reversals)
-#' @return Original correlation matrix 'doubled' to include all reverse-score correlations
+#' Artificially doubles the length of rows & columns in
+#' correlation matrix by including all reverse-scored variable.
+#' (Mainly used for cluster analysis)
+#'
+#' @param corrs the correlation matrix including all correlations between variables in the item set
+#'
 #' @export
 
 reflectedRs <- function(corrs) {
@@ -17,4 +18,3 @@ reflectedRs <- function(corrs) {
   rownames(doubledCorrs) <- c(colnames(corrs),paste0(colnames(corrs),".R"))
   return(doubledCorrs)
 }
-
