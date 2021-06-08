@@ -15,13 +15,6 @@ reflectedClusters <- function(itemRs, nclusters = 5) {
   fit <- hclust(d, method="ward.D2")
   tree <- as.dendrogram(fit, hang=0) #normally I would specify 'hang=1', but when labels are long, this is the only way I've figured to be able to see most of the full items
 
-  #export to a huge-ass diagram so that you can see the structure of the dendrogram
-  #when specifying a huge-ass number of desired clusters (here: 100)
-  png(file="dendro2.png", width=10000, height=2000)
-  plot(tree[[1]],main='',ylab="Deviation from perfect correlation",xlab='',sub='') #display 1st half of dendrogram (second is just the 'reflection')
-  rect.hclust(fit, k=nclusters*2, border="red") # k = the number of clusters you want (it is doubled since the 'reflected' items are included as separate variables)
-  dev.off()
-
   #identify which items were placed in which cluster,
   #and whether the included variable was a reversal of the original variable
   groups <- data.frame(cutree(fit, k=nclusters*2))
@@ -44,9 +37,7 @@ reflectedClusters <- function(itemRs, nclusters = 5) {
   #add the original variable names back in
   groups2$var <- colnames(itemRs)
 
-  attach(groups2)
-  finalgroups <- data.frame(var,min,rev)
-  detach(groups2)
+  finalgroups <- data.frame(groups2$var,groups2$min,groups2$rev)
   colnames(finalgroups)<-c("variable","cluster","reversed")
 
   #add size of each cluster (i.e., number of items included in each)
@@ -54,8 +45,6 @@ reflectedClusters <- function(itemRs, nclusters = 5) {
   colnames(nmembers)<- c("cluster","ClusterSize")
 
   finalgroups<-merge(finalgroups, nmembers, by.x = "cluster")
-
-  write.csv(finalgroups, "clusters.csv", row.names = F)
 
   reflectedClusters<-list(finalgroups,fit)
   names(reflectedClusters)<-c("clusters","dendro")
