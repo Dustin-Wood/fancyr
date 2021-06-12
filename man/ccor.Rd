@@ -27,4 +27,5 @@ which are invariant across potentially arbitrary item- or variable-reversals.
 Function computes Cohen-adjusted correlations (or avg. product of standardized deviations-from-scale-center)
 
 Note that these are NOT the same as regular correlations of 'scale-centered' scores.  See Wood (202x) for details on how to interpret.
+That is all.
 }

@@ -19,6 +19,7 @@
 #' @export
 
 ccor <- function(x, smin, smax, margin=2) {
+  #add a meaningless comment
   cx <- (x - (smax + smin)/2)/(smax-smin)*2
   zcx <- apply(cx, margin, function(x) (x/sqrt((sum(x^2)/(length(x))))))
   ccor <- t(zcx) %*% zcx / nrow(zcx) #this last bit can be used to calculate matching pretty generally
