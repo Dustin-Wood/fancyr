@@ -4,17 +4,21 @@
 \alias{ccor}
 \title{Scale-Center (or Cohen) Correlations, rc}
 \usage{
-ccor(x, smin, smax)
 ccor(x, smin = 1, smax = 6) #e.g., standard 1-5 Likert scale
 }
 \arguments{
 \item{x}{matrix to be used for correlations}
 
-\item{smin}{Scale minimum}
+\item{smin}{Scale minimum (default if not given = -1)}
 
-\item{smax}{Scale maximum}
+\item{smax}{Scale maximum (default if not given = 1)}
 
 \item{margin}{Specify whether correlations are of rows=1 or columns = 2 (default is columns)}
+}
+\value{
+Scale-center correlations (\code{r_c})
+
+Note that these are NOT the same as regular correlations done on 'scale-centered' scores.  See Wood (202x) for details on how to interpret.
 }
 \description{
 Estimate correlations between variables where the scale midpoint serves as
@@ -25,7 +29,4 @@ which are invariant across potentially arbitrary item- or variable-reversals.
 }
 \details{
 Function computes Cohen-adjusted correlations (or avg. product of standardized deviations-from-scale-center)
-
-Note that these are NOT the same as regular correlations of 'scale-centered' scores.  See Wood (202x) for details on how to interpret.
-That is all.
 }
