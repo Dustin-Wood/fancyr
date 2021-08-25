@@ -4,12 +4,15 @@
 \alias{zcx}
 \title{Standardized Scale-Center Deviation Scores}
 \usage{
-zcx(x, center)
+zcx(x, center, addsc = F)
 }
 \arguments{
 \item{x}{matrix containing set of scores to be transformed}
 
 \item{center}{center point of the scale}
+
+\item{addsc}{Should the person's standard center-score-deviation (\code{sc.p}) be added
+to the returned matrix? (defaults to \code{F})}
 }
 \value{
 Standardized scale-centered scores.
@@ -20,7 +23,9 @@ the number of 'standard scale-center deviations from the scale center'.
 
 This can be understood as a simple alteration of the usual z-score formula,
 where in every place that the person's mean score would be found, we replace this
-with the scale-center point instead (e.g., \code{3} for a \code{1-5} Likert scale).
+with the scale-center point instead (e.g., \code{3} for a \code{1-5} Likert scale):
+
+\deqn{zcx = (x-C)/s_C}
 }
 \details{
 Data should be prepared so that all of the person's scores are given

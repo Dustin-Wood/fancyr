@@ -10,6 +10,8 @@
 #' \deqn{zcx = (x-C)/s_C}
 #' @param x matrix containing set of scores to be transformed
 #' @param center center point of the scale
+#' @param addsc Should the person's standard center-score-deviation (\code{sc.p}) be added
+#' to the returned matrix? (defaults to \code{F})
 #' @return Standardized scale-centered scores.
 #' @details Data should be prepared so that all of the person's scores are given
 #' in the same row.
@@ -34,9 +36,12 @@
 #'
 #' @export
 
-zcx <- function(x, center) {
-  dx <- x - center
-  zcx.t <- t(scale(t(cbind(dx,-dx))))[,1:ncol(dx)]
-  zcx <- zcx.t * sqrt(ncol(dx)*2/(ncol(dx)*2-1))
+zcx <- function(x, center, addsc = F) {
+  cx <- x - center
+  sc.p <- apply(cx, 1, function(x) sqrt(sum(x^2)/ncol(cx)))
+  zcx <- cx / sc.p
+  if (addsc == T) {
+    zcx <- cbind(zcx,sc.p)
+  }
   return(zcx)
 }
