@@ -18,7 +18,9 @@ ccor(x, smin = 1, smax = 6) #e.g., standard 1-5 Likert scale
 \value{
 Scale-center correlations (\code{r_c})
 
-Note that these are NOT the same as regular correlations done on 'scale-centered' scores.  See Wood (202x) for details on how to interpret.
+Note that these are NOT the same as regular correlations done on 'scale-centered' scores.
+See Wood (202x) for details on how to interpret. Additionally: this script is not particularly
+friendly toward missing values.
 }
 \description{
 Estimate correlations between variables where the scale midpoint serves as
