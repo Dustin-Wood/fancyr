@@ -15,7 +15,9 @@
 #' Function computes Cohen-adjusted correlations (or avg. product of standardized deviations-from-scale-center)
 #' @return Scale-center correlations (\code{r_c})
 #'
-#' Note that these are NOT the same as regular correlations done on 'scale-centered' scores.  See Wood (202x) for details on how to interpret.
+#' Note that these are NOT the same as regular correlations done on 'scale-centered' scores.
+#' See Wood (202x) for details on how to interpret. Additionally: this script is not particularly
+#' friendly toward missing values.
 #' @export
 
 ccor <- function(x, smin = -1, smax = 1, margin=2) {
