@@ -4,11 +4,10 @@
 \alias{zcx}
 \title{Standardized Scale-Center Deviation Scores}
 \usage{
-<<<<<<< HEAD
 zcx(x, center, addsc = F)
 }
 \arguments{
-\item{x}{matrix containing set of scores to be transformed}
+\item{x}{matrix to be transformed}
 
 \item{center}{center point of the scale}
 
@@ -17,6 +16,8 @@ to the returned matrix? (defaults to \code{F})}
 }
 \value{
 Standardized scale-centered scores.
+
+Scale-centered scores on [-1,1] range.
 }
 \description{
 Transforms the scores of interest to a z-score-like metric indicating
@@ -27,27 +28,11 @@ where in every place that the person's mean score would be found, we replace thi
 with the scale-center point instead (e.g., \code{3} for a \code{1-5} Likert scale):
 
 \deqn{zcx = (x-C)/s_C}
-=======
-zcx(x, center)
-}
-\arguments{
-\item{x}{matrix to be transformed}
-
-\item{center}{center point of the scale}
-}
-\value{
-Scale-centered scores on [-1,1] range.
-}
-\description{
-Transforms the scores of interest to a z-score like metric indicating
-the number of 'standard scale-center deviations from the scale center'
->>>>>>> b6e168b09c1d279467a336f7d5929ddada5263d3
 }
 \details{
 Data should be prepared so that all of the person's scores are given
 in the same row.
 
-<<<<<<< HEAD
 * The scale-centered scores do NOT have the usual interpretation of
 [regular] z-scores as being translatable to approximate probabilities assuming
 a normal distribution of responses.
@@ -64,7 +49,12 @@ then all scores will equal \code{-1 & 1}.
 * Note that \code{zcx} scores do NOT divide by \code{N_k-1} (where \code{N_k}
 = number of items in profile) because a degree of freedom is not lost to estimate
 the person's mean response, as done in standard z-scores.
-=======
+Transforms the scores of interest to a z-score like metric indicating
+the number of 'standard scale-center deviations from the scale center'
+
+Data should be prepared so that all of the person's scores are given
+in the same row.
+
 \bullet The scale-centered scores do NOT have the usual interpretation of
 [regular] z-scores as being translatable to approximate probabilities assuming
 a normal distribution of responses.
@@ -78,5 +68,4 @@ then all scores will equal \code{-1} & \code {1}.
 \bullet Note that \code{zcx} scores do NOT divide by \code{N_k-1} (where \code{N_k}
 = number of items in profile) because a degree of freedom is not lost to estimate
 the mean \code{\bar{x}}
->>>>>>> b6e168b09c1d279467a336f7d5929ddada5263d3
 }

@@ -1,6 +1,5 @@
 #' Standardized Scale-Center Deviation Scores
 #' @description
-<<<<<<< HEAD
 #' Transforms the scores of interest to a z-score-like metric indicating
 #' the number of 'standard scale-center deviations from the scale center'.
 #'
@@ -33,7 +32,6 @@
 #' * Note that \code{zcx} scores do NOT divide by \code{N_k-1} (where \code{N_k}
 #' = number of items in profile) because a degree of freedom is not lost to estimate
 #' the person's mean response, as done in standard z-scores.
-=======
 #' Transforms the scores of interest to a z-score like metric indicating
 #' the number of 'standard scale-center deviations from the scale center'
 #' @param x matrix to be transformed
@@ -55,12 +53,10 @@
 #' \bullet Note that \code{zcx} scores do NOT divide by \code{N_k-1} (where \code{N_k}
 #' = number of items in profile) because a degree of freedom is not lost to estimate
 #' the mean \code{\bar{x}}
->>>>>>> b6e168b09c1d279467a336f7d5929ddada5263d3
 #'
 #'
 #' @export
 
-<<<<<<< HEAD
 zcx <- function(x, center, addsc = F) {
   cx <- x - center
   sc.p <- apply(cx, 1, function(x) sqrt(sum(x^2)/ncol(cx)))
@@ -68,11 +64,6 @@ zcx <- function(x, center, addsc = F) {
   if (addsc == T) {
     zcx <- cbind(zcx,sc.p)
   }
-=======
-zcx <- function(x, center) {
-  dx <- x - center
-  zcx.t <- t(scale(t(cbind(dx,-dx))))[,1:ncol(dx)]
-  zcx <- zcx.t * sqrt(ncol(dx)*2/(ncol(dx)*2-1))
->>>>>>> b6e168b09c1d279467a336f7d5929ddada5263d3
   return(zcx)
 }
+
