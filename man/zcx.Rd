@@ -51,8 +51,6 @@ then all scores will equal \code{-1 & 1}.
 the person's mean response, as done in standard z-scores.
 Transforms the scores of interest to a z-score like metric indicating
 the number of 'standard scale-center deviations from the scale center'
-<<<<<<< HEAD
-=======
 
 Data should be prepared so that all of the person's scores are given
 in the same row.
@@ -70,5 +68,4 @@ then all scores will equal \code{-1} & \code {1}.
 \bullet Note that \code{zcx} scores do NOT divide by \code{N_k-1} (where \code{N_k}
 = number of items in profile) because a degree of freedom is not lost to estimate
 the mean \code{\bar{x}}
->>>>>>> ca0bd0d1443e25b90e9d99b0beb2fbbc9f28ec0c
 }

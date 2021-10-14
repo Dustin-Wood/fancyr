@@ -34,8 +34,7 @@
 #' the person's mean response, as done in standard z-scores.
 #' Transforms the scores of interest to a z-score like metric indicating
 #' the number of 'standard scale-center deviations from the scale center'
-<<<<<<< HEAD
-=======
+#'
 #' @param x matrix to be transformed
 #' @param center center point of the scale
 #' @return Scale-centered scores on [-1,1] range.
@@ -56,7 +55,6 @@
 #' = number of items in profile) because a degree of freedom is not lost to estimate
 #' the mean \code{\bar{x}}
 #'
->>>>>>> ca0bd0d1443e25b90e9d99b0beb2fbbc9f28ec0c
 #'
 #' @export
 
