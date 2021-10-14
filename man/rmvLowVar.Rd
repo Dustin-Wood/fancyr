@@ -4,17 +4,19 @@
 \alias{rmvLowVar}
 \title{Remove Respondents Below Minimum Response Variability}
 \usage{
-rmvLowVar(data, max, min, minvar)
+rmvLowVar(data, smax, smin, minvar)
 }
 \arguments{
 \item{data}{Matrix to be transformed}
 
-\item{max}{Maximum response on the scale}
+\item{smax}{Scale maximum}
 
-\item{min}{Minimum response on the scale}
+\item{smin}{Scale minimum}
+
+\item{minvar}{Minimum variance allowed}
 }
 \value{
-minvar Minimum variance
+Dataset with cases failing to pass minimum variance screen removed
 }
 \description{
 Exclude cases that have less than a specified minimum level of variability
@@ -23,8 +25,4 @@ Exclude cases that have less than a specified minimum level of variability
 This is a data screen designed to remove participants that did
 not vary their ratings - which at extreme levels is generally indicative
 of insufficient effort responding.
-
-A minvar value of .10 was used by Wood & Harms (202x).
-Note that a value of .0625 (from squaring sd = .25) will be obtained from
-a respondent who alternates equally between two responses on a 5-point scale.
 }
