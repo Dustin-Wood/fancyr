@@ -35,6 +35,9 @@
 #' Transforms the scores of interest to a z-score like metric indicating
 #' the number of 'standard scale-center deviations from the scale center'
 #'
+#' * Note that this will tend to make scores more continuous EXCEPT for the scale midpoint,
+#' which will be exactly \code{0} for anyone who provided that value after this transformation.
+#'
 #' @export
 
 zcx <- function(x, center, addsc = F) {

@@ -4,7 +4,7 @@
 \alias{rmvLowVar}
 \title{Remove Respondents Below Minimum Response Variability}
 \usage{
-rmvLowVar(data, smax, smin, minvar)
+rmvLowVar(data, smax, smin, minvar, includeScreen = F)
 }
 \arguments{
 \item{data}{Matrix to be transformed}
@@ -14,6 +14,8 @@ rmvLowVar(data, smax, smin, minvar)
 \item{smin}{Scale minimum}
 
 \item{minvar}{Minimum variance allowed}
+
+\item{includeScreen}{Include the screening variable created (default to \code{F})}
 }
 \value{
 Dataset with cases failing to pass minimum variance screen removed
