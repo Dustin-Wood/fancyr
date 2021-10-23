@@ -22,4 +22,5 @@
 perVar2<-function (data, smin, smax) {
   perMaxVar <- apply(data, 1, function(x) (sd(as.matrix(x), na.rm = T) * (sqrt((length(x) - 1)/length(x)))/(smax - smin)/(0.5))^2)
   return(perMaxVar)
+
 }
