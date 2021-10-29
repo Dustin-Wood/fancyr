@@ -14,7 +14,8 @@ prMaxSD(data, smin, smax)
 \item{smax}{Scale maximum}
 }
 \value{
-estimate of the proportion of the responding from max possible (range from 0 to 1)
+estimate of the proportion of the observed standard deviation
+of the row scores from max possible (range from 0 to 1)
 }
 \description{
 For a specified set of variables (with a common range), estimate the percentage
@@ -26,8 +27,8 @@ vary their ratings substantially - which at extreme levels is generally indicati
 of insufficient effort responding.
 
 Note: prMaxSD = .25 would be observed on a 5-point scale from a person rating ALL
-items as 50% one number and 50% the adjacent number (e.g., 50% 1's and 50% 2's, or
-50% 3's and 50% 4's).
+items as 50\% one number and 50\% the adjacent number (e.g., 50\% 1's and 50\% 2's, or
+50\% 3's and 50\% 4's).
 }
 \examples{
 #combine with subset function to remove people with

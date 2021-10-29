@@ -42,10 +42,11 @@
 
 zcx <- function(x, center, addsc = F) {
   cx <- x - center
-  sc.p <- apply(cx, 1, function(x) sqrt(sum(x^2)/ncol(cx)))
+  sc.p <- apply(cx, 1, function(x) sqrt(sum(x^2,na.rm = T)/sum(!is.na(x))))
   zcx <- cx / sc.p
   if (addsc == T) {
     zcx <- cbind(zcx,sc.p)
   }
   return(zcx)
 }
+
