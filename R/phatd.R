@@ -1,16 +1,17 @@
-#' Reliability-adjusted Correlations Over a Measurement Interval (t)
+#' Reliability-adjusted Correlations Over a Measurement Interval (d)
 #' @description
 #' Estimate the degree to which correlations between variables over
-#' time interval (t) are smaller than the retest correlations of the variables
+#' measurement interval (d; generally a period of time, or number of items apart)
+#' are smaller than the retest correlations of the variables
 #' over that interval.  This is estimated via an understanding of Spearman's
 #' adjustment("correction") for measurement unreliability.
 #'
-#' For instance: phat_xy(t) = .80 indicates that the correlation between X and Y
-#' over measurement interval t is 80\% of the retest correlations of X and Y
+#' For instance: \code{phat_xy(d) = .80} indicates that the correlation between
+#' \code{x} and \code{y} over measurement interval t is 80\% of the retest correlations of X and Y
 #' (i.e., their correlations with themselves) over the same measurement interval.
 #'
-#' Importantly: x1 and x2 should be the same set of variables, given in the same
-#' order, but rated at different times.  For instance, x1 and x2 may be the first
+#' Importantly: \code{x1} and \code{x2} should be the same set of variables, given in the same
+#' order, but rated at different times.  For instance, \code{x1} and \code{x2} may be the first
 #' and second administrations of the items in some personality inventory a year
 #' apart (or: a month, a day, etc).
 #' @usage
@@ -19,12 +20,12 @@
 #' phat.t(x1, x2, adjust = F, posdef = "Higham") #don't adjust for retest reliability
 #' @param x1 first matrix to be used to estimate correlations
 #' @param x2 second matrix to be used (all variables should be the same as x1, and in the same order!!)
-#' @param adjust do you wish to adjust correlations for retest reliability? Defaults to TRUE
-#' @param posdef do you wish to adjust correlations to make the matrix positive definite? ("Bock", "Higham", and defaults to FALSE)
+#' @param adjust adjust correlations for retest reliability? Defaults to TRUE
+#' @param posdef adjust correlations to make the matrix positive definite? ("Bock", "Higham", and default = FALSE)
 #'
 #' @export
 
-phat.t <- function(x1, x2, adjust = T, posdef = F) {
+phatd <- function(x1, x2, adjust = T, posdef = F) {
   library(psych) #this function utilizes two functions from 'psych' package
 
   r_x1x2 <- corr.test(x1, x2, use="complete.obs", method="pearson", ci=F)

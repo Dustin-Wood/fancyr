@@ -2,7 +2,7 @@
 % Please edit documentation in R/invertVarOrder.R
 \name{invertVarOrder}
 \alias{invertVarOrder}
-\title{Invert a 'P-Order-Var' Matrix to P-Var-Order Matrix}
+\title{Invert a 'P-by-Order (with Vars)' Matrix to 'P-by-Var (with Orders)' Matrix}
 \usage{
 invertVarOrder(pByOrder)
 }

@@ -1,4 +1,4 @@
-#' Invert a 'P-Order-Var' Matrix to P-Var-Order Matrix
+#' Invert a 'P-by-Order (with Vars)' Matrix to 'P-by-Var (with Orders)' Matrix
 #' @description
 #' If working with a matrix that shows which item each participant completed 1st, 2nd, etc,
 #' it will often be more useful to invert this to show in which order the participant completed

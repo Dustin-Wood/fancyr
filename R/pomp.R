@@ -7,6 +7,9 @@
 #' @param smin Scale minimum
 #' @param smax Scale maximum
 #' @param p Return \emph{proportion} or \emph{percent}? (default proportion)
+#' @usage
+#' pomp(x,1,5) #usage for a standard 1-to-5 Likert scale
+#' pomp(x,min(x),max(x)) #possible usage if you trust some raters hit minimum and maximum ratings at some point
 #' @return Scores with maximum possible range of [0,1] (if \strong{proportion}
 #' specified) or [0,100] (if \strong{percent} specified)
 #'
