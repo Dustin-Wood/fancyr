@@ -4,7 +4,8 @@
 \alias{pomp}
 \title{Proportion of Maximum Possible (POMP) Scores}
 \usage{
-pomp(x, smin, smax, p = "proportion")
+pomp(x,1,5) #usage for a standard 1-to-5 Likert scale
+pomp(x,min(x),max(x)) #possible usage if you trust some raters hit minimum and maximum ratings at some point
 }
 \arguments{
 \item{x}{matrix to be transformed}
