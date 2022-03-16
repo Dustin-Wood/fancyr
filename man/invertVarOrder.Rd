@@ -5,10 +5,14 @@
 \title{Invert a 'P-by-Order (with Vars)' Matrix to 'P-by-Var (with Orders)' Matrix}
 \usage{
 invertVarOrder(pByOrder)
+invertVarOrder(pByOrder, vorder = pscores)
 }
 \arguments{
 \item{pByOrder}{dataframe containing participant ID as column 1, and then columns describing
 which item was rated first, second, etc}
+
+\item{vOrder}{specify the order you would like the variables to be ordered (this is necessarily
+mainly if the cells of the pByOrder matrix are variable names rather than variable NUMBERS)}
 }
 \value{
 A participant-by-item matrix detailing when participant rated each item
