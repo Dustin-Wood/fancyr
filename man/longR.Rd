@@ -13,5 +13,6 @@ longR(corMat)
 a dataframe with \code{c("varX","varY","rXY")} layout
 }
 \description{
-Sometimes you just want all your correlations in one column.
+Utility function to translate a correlation matrix to a
+edgelist format where the correlations are in one column.
 }

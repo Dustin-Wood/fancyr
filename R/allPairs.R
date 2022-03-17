@@ -1,7 +1,7 @@
-#' Make a Dataframe with all combinations of measurements on a single person
+#' Make a Dataframe with all Combinations of Measurements Made on a Single Person
 #' @description
 #' This is a crude little function to try to estimate all (N^2-N)/2 combinations
-#' of different measurements done on a single person
+#' of different measurements done on a single person. (Or (N^2-N), if doubled.)
 #'
 #' Note that the code is built on the assumption that a "person" and "measurement"
 #' identifier are the first two columns of your dataset.
@@ -14,11 +14,7 @@
 #'
 #' @export
 
-<<<<<<< HEAD
-allPairs <- function(data, double = T) {
-=======
-allPairs <- function(data) {
->>>>>>> 373dd714a059bbf6a661503df2e733cc555a2642
+allPairs <- function(data, double = F) {
   #for each person, create numerical m
   #ranging from 1 to number of measurements
   #for person p (ordered first to last)
@@ -44,22 +40,19 @@ allPairs <- function(data) {
     lagdata$nm <- lagdata$d.nm - i
 
     step_i <- merge(data,lagdata, by=c("p","nm"))
-    ifelse(i==1,paireddata <- step_i, paireddata <- rbind(paireddata,step_i))
+    ifelse(i==1,pdata <- step_i, pdata <- rbind(pdata,step_i))
 
   }
 
   #remove "nm" and "d.nm" columns that were added to help with matching
-  paireddata <- subset(paireddata, select = -c(nm,d.nm))
-<<<<<<< HEAD
+  pdata <- subset(pdata, select = -c(nm,d.nm))
 
   if(double == T) {
-  yDbl <- data.frame(paireddata[1],paireddata[(ncol(data)+1):(ncol(paireddata))],paireddata[2:ncol(data)])
-  colnames(yDbl) <- colnames(paireddata)
-  paireddata <- rbind(paireddata,yDbl)
+    yDbl <- data.frame(pdata[1],pdata[(((ncol(pdata)+1)/2)+1):ncol(pdata)],pdata[2:((ncol(pdata)+1)/2)])
+    colnames(yDbl) <- colnames(pdata)
+    pdata <- rbind(pdata,yDbl)
   }
 
-=======
->>>>>>> 373dd714a059bbf6a661503df2e733cc555a2642
-  return(paireddata)
+  return(pdata)
 }
 

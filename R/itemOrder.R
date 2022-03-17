@@ -11,19 +11,20 @@
 #' @param numeric Convert to numeric ratings?  (Defaults to \code{T},
 #' but may be \code{F} if itemorder presents variables names rather than numbers)
 #' @usage
-#' qualOrder(BFIorder) #e.g., standard 1-5 Likert scale
+#' itemOrder(BFIorder) #order in which person saw each BFI item, if presented randomly
 #' @details
-#' Function computes Cohen-adjusted correlations (or avg. product of standardized deviations-from-scale-center)
+#' Function indicates which items the person saw when.
+#' This can be used to estimate item distance and such matters
 #' @return Matrix of which item was presented first, second, etc)
 #'
 #' @export
 
 itemOrder <- function(itemorder, delim = "\\|", numeric = T) {
-  vorder<-stringr::str_split(itemorder, pattern = delim, simplify = T)
   if(numeric == T) {
-    vorder2<- matrix(as.numeric(vorder), nrow = nrow(vorder), ncol = ncol(vorder))
+    vorder2<-t(apply(itemorder,1,function(x) as.numeric(stringr::str_split(x, pattern = delim, simplify = T))))
   } else {
-    vorder2<- matrix(vorder, nrow = nrow(vorder), ncol = ncol(vorder))
+    vorder2<-t(apply(itemorder,1,function(x) stringr::str_split(x, pattern = delim, simplify = T)))
   }
   return(vorder2)
 }
+

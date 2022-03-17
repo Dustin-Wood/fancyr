@@ -4,7 +4,7 @@
 \alias{itemOrder}
 \title{Split Item-Order Information into Separate Variables}
 \usage{
-qualOrder(BFIorder) #e.g., standard 1-5 Likert scale
+itemOrder(BFIorder) #order in which person saw each BFI item, if presented randomly
 }
 \arguments{
 \item{itemorder}{Order of which item presented the participant first, second, etc}
@@ -26,5 +26,6 @@ This (pretty simple) code will allow you to more easily separate this item-order
 into separate variables that can be used for quantitative analyses
 }
 \details{
-Function computes Cohen-adjusted correlations (or avg. product of standardized deviations-from-scale-center)
+Function indicates which items the person saw when.
+This can be used to estimate item distance and such matters
 }

@@ -21,8 +21,8 @@ Estimate z-scores for column variables using N rather than standard N-1
 }
 \details{
 \emph{Why do this?} Because it is easier to show that correlations are equivalent to (1)
- the average product of zX*zY scores (Cohen, Cohen, Aiken, & West, 2003; Eq. 2.3.1) or (2)
- the average squared difference of zX and zY scores (Cohen, Cohen, Aiken, & West, 2003; Eq. 2.2.4)
- when using z-scores computed by using N rather than N-1.  Indeed, when done so, the averages of these
+ the average product of \code{zX*zY} scores (Cohen, Cohen, Aiken, & West, 2003; Eq. 2.3.1) or (2)
+ the average squared difference of \code{zX} and \code{zY} scores (Cohen, Cohen, Aiken, & West, 2003; Eq. 2.2.4)
+ when using z-scores computed by using \code{N} rather than \code{N-1}.  Indeed, when done so, the averages of these
  product decompositions become strictly equivalent.
 }

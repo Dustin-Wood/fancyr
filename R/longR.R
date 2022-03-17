@@ -1,6 +1,7 @@
 #' Stretch (usually a Correlation) Matrix into an Edgelist Format
 #' @description
-#' Sometimes you just want all your correlations in one column.
+#' Utility function to translate a correlation matrix to a
+#' edgelist format where the correlations are in one column.
 #' @param corMat Matrix you want to convert (doesn't need to be a correlation matrix)
 #' @usage
 #' longR(corMat)
