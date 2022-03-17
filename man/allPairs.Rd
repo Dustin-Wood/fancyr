@@ -2,7 +2,7 @@
 % Please edit documentation in R/allPairs.R
 \name{allPairs}
 \alias{allPairs}
-\title{Make a Dataframe with all combinations of measurements on a single person}
+\title{Make a Dataframe with all Combinations of Measurements Made on a Single Person}
 \usage{
 allPairs(pmRatingData)
 }
@@ -16,7 +16,7 @@ are given on separate lines
 }
 \description{
 This is a crude little function to try to estimate all (N^2-N)/2 combinations
-of different measurements done on a single person
+of different measurements done on a single person. (Or (N^2-N), if doubled.)
 
 Note that the code is built on the assumption that a "person" and "measurement"
 identifier are the first two columns of your dataset.
