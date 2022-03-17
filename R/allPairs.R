@@ -14,7 +14,11 @@
 #'
 #' @export
 
+<<<<<<< HEAD
 allPairs <- function(data, double = T) {
+=======
+allPairs <- function(data) {
+>>>>>>> 373dd714a059bbf6a661503df2e733cc555a2642
   #for each person, create numerical m
   #ranging from 1 to number of measurements
   #for person p (ordered first to last)
@@ -46,6 +50,7 @@ allPairs <- function(data, double = T) {
 
   #remove "nm" and "d.nm" columns that were added to help with matching
   paireddata <- subset(paireddata, select = -c(nm,d.nm))
+<<<<<<< HEAD
 
   if(double == T) {
   yDbl <- data.frame(paireddata[1],paireddata[(ncol(data)+1):(ncol(paireddata))],paireddata[2:ncol(data)])
@@ -53,6 +58,8 @@ allPairs <- function(data, double = T) {
   paireddata <- rbind(paireddata,yDbl)
   }
 
+=======
+>>>>>>> 373dd714a059bbf6a661503df2e733cc555a2642
   return(paireddata)
 }
 
