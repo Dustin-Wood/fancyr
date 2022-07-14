@@ -4,14 +4,12 @@
 \alias{ccor}
 \title{Scale-Center (or Cohen) Correlations, rc}
 \usage{
-ccor(x, smin = 1, smax = 6) #e.g., standard 1-5 Likert scale
+ccor(x, mid = 3) #e.g., midpoint of standard 1-5 Likert scale is 3
 }
 \arguments{
 \item{x}{matrix to be used for correlations}
 
-\item{smin}{Scale minimum (default if not given = -1)}
-
-\item{smax}{Scale maximum (default if not given = 1)}
+\item{mid}{Scale midpoint (default if not given = 0)}
 
 \item{margin}{Specify whether correlations are of rows=1 or columns = 2 (default is columns)}
 }
