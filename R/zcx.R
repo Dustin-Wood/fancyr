@@ -18,8 +18,6 @@
 #' @param x matrix containing set of scores to be transformed
 #' @param center center point of the scale
 #' @param margin estimate zcx values using sc's calculated from \emph{row}(=1) or \emph{column}=2?
-#' @param addsc Should the person's standard center-score-deviation (\code{sc.p}) be added
-#' to the returned matrix? (defaults to \code{F})
 #' @return Standardized scale-centered scores.
 #' @details Data should be prepared so that all of the person's scores are given
 #' in the same row.
@@ -47,13 +45,14 @@
 #'
 #' @export
 
-zcx <- function(x, center, addsc = F, margin = 1) {
+zcx <- function(x, center, margin = 1) {
   cx <- x - center
-  sc.p <- apply(cx, margin, function(x) sqrt(sum(x^2,na.rm = T)/sum(!is.na(x))))
-  zcx <- cx / sc.p
-  if (addsc == T) {
-    zcx <- cbind(zcx,sc.p)
+  do_zcx <- function(x) {
+    sc.p <- sqrt(sum(x^2,na.rm = T)/sum(!is.na(x)))
+    zcx <- x/sc.p
+    return(zcx)
   }
+  zcx <- apply(cx, margin, function(x) do_zcx(x) )
   return(zcx)
 }
 

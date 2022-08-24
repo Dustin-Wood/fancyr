@@ -4,15 +4,12 @@
 \alias{zcx}
 \title{Standardized Scale-Center Deviation Scores}
 \usage{
-zcx(x, center, addsc = F, margin = 1)
+zcx(x, center, margin = 1)
 }
 \arguments{
 \item{x}{matrix containing set of scores to be transformed}
 
 \item{center}{center point of the scale}
-
-\item{addsc}{Should the person's standard center-score-deviation (\code{sc.p}) be added
-to the returned matrix? (defaults to \code{F})}
 
 \item{margin}{estimate zcx values using sc's calculated from \emph{row}(=1) or \emph{column}=2?}
 }
