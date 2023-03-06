@@ -23,9 +23,9 @@
 #' datafile$prMaxSD <- prMaxSD(datafile[varSet], 1, 5)
 #' subdata <- subset(datafile, prMaxSD > .05)
 
-prMaxSD <- function(data, smin, smax) {
+prMaxSD <- function(data, smin, smax, dir=1) {
   sd.p <- function(x) { sd(as.matrix(x), na.rm = T)}
-  prMaxSD <- apply(data, 1, function(x) sd.p(x)*sqrt((sum(!is.na(x))-1)/sum(!is.na(x)))/((smax-smin)/2))
+  prMaxSD <- apply(data, dir, function(x) sd.p(x)*sqrt((sum(!is.na(x))-1)/sum(!is.na(x)))/((smax-smin)/2))
   return(prMaxSD)
 }
 
