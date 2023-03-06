@@ -51,8 +51,7 @@ phatd <- function(x1, x2, adjust = T, posdef = F) {
   #into a positive definite matrix
   if (posdef == "Higham") {
     #smooth into a positive-definite matrix using Higham's (2002) adjustment
-    library(Matrix)
-    posDMat<-nearPD(r_ExEy_d, corr=FALSE, keepDiag = TRUE)
+    posDMat<-Matrix::nearPD(r_ExEy_d, corr=FALSE, keepDiag = TRUE)
     r_ExEy_d<-data.matrix(posDMat$mat)
   }
 

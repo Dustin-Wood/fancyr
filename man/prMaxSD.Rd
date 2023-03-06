@@ -4,7 +4,7 @@
 \alias{prMaxSD}
 \title{Estimate Proportion of Observed Standard Deviation from Max Possible}
 \usage{
-prMaxSD(data, smin, smax)
+prMaxSD(data, smin, smax, dir = 1)
 }
 \arguments{
 \item{data}{Matrix to be transformed (often will need to specify subset of larger dataframe)}
