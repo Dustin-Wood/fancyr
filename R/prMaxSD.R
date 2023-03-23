@@ -12,16 +12,19 @@
 #' Note: prMaxSD = .25 would be observed on a 5-point scale from a person rating ALL
 #' items as 50\% one number and 50\% the adjacent number (e.g., 50\% 1's and 50\% 2's, or
 #' 50\% 3's and 50\% 4's).
-#'
+#'     Because it seems like these respondents with such score variability should be cut,
+#' .30 may be a good cut point.
+#'     Note also that the code makes a minor adjustment to calculate within-person standard deviation
+#' as the population estimate (using N rather than N-1) to make maximum possible = 1
 #' @return estimate of the proportion of the observed standard deviation
 #' of the row scores from max possible (range from 0 to 1)
 #' @export
 #' @examples
 #' #combine with subset function to remove people with
-#' #less than 25% of the maximum possible SD over this range
+#' #less than 30% of the maximum possible SD over this range
 #' #(an indicator of invariant or insufficient effort responding)
 #' datafile$prMaxSD <- prMaxSD(datafile[varSet], 1, 5)
-#' subdata <- subset(datafile, prMaxSD > .05)
+#' subdata <- subset(datafile, prMaxSD > .30)
 
 prMaxSD <- function(data, smin, smax, dir=1) {
   sd.p <- function(x) { sd(as.matrix(x), na.rm = T)}
