@@ -11,7 +11,9 @@ avgRep(set1, set2, p = "p")
 
 \item{set2}{second set of ratings}
 
-\item{p}{person (or subject/case) identifier; should be given as first column}
+\item{p}{person (or subject/case) identifier; should be given as first column
+Note that if "p = 0" is given, then this will match on the row.names
+of the datasets}
 }
 \value{
 Person's (p) average score for variable in each column
