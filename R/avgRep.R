@@ -22,7 +22,7 @@ avgRep <- function(set1,set2, p = "p") {
     p = "p"
   }
   t_set<-rbind(set1,set2)
-  set<-ddply(t_set, .(p), function(x) colMeans(x[2:ncol(x)], na.rm = T))
+  set<-plyr::ddply(t_set, c(p), function(x) colMeans(x[2:ncol(x)], na.rm = T))
   set<-set[complete.cases(set),]
   return(set)
 }

@@ -3,12 +3,8 @@
 #' @param set Set of variables and scores you wish to perform analysis on
 #' @param sims A numeric specifying the number of random splithalves to generate.
 #' @returns List of all separate split-half correlation vector correlation matrices
-#' @details  TBD
 #' @export
-#set <- SR1
-#CI = .95
-#seed = 2
-#sims = 100
+
 
 qrrSplithalf <-function(set, sims=100, graph=FALSE, CI=.95, minval=-1.0, seed=F) {
     comp.data <- subset(set, complete.cases(set))
@@ -20,18 +16,18 @@ qrrSplithalf <-function(set, sims=100, graph=FALSE, CI=.95, minval=-1.0, seed=F)
 
     if(seed!=F) {set.seed(seed)}
 
-      #' my adaptation, for saving all the resulting matrices.
-      #'  Changes noted, with rationale given:
+      # my adaptation, for saving all the resulting matrices.
+      #  Changes noted, with rationale given:
       storer <- list() #' make a list instead of a vector
       for(i in 1:sims) {
         rand.assign <- sample(coded, N, FALSE)
         R1 <- as.matrix(cor(comp.data[rand.assign <= half.N,]))
         R2 <- as.matrix(cor(comp.data[rand.assign > half.N,]))
-        #' need to get rid of the diagonals to avoid big problems
+        # need to get rid of the diagonals to avoid big problems
         diag(R1) <- NA
         diag(R2) <- NA
-        #' calculate the correlations-of-vectors-of-correlations.
-        #'  There is no Spearman-Brown prophecy adjustment to the estimate as was done in S&W paper
+        # calculate the correlations-of-vectors-of-correlations.
+        #  There is no Spearman-Brown prophecy adjustment to the estimate as was done in S&W paper
         storer[[i]] <- cor(R1, R2, use = "pairwise.complete.obs")
       }
       #the rest is ancestral code that isn't used for this function currently,

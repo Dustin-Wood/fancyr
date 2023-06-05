@@ -17,6 +17,3 @@ List of all separate split-half correlation vector correlation matrices
 \description{
 TBD
 }
-\details{
-TBD
-}
