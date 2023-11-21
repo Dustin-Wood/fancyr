@@ -22,5 +22,11 @@ pomp <- function(x, smin, smax, p = "proportion") {
   if (p == "percent") {
     px <- (x - smin)/(smax-smin)*100
   }
-return(px)
+  #allow a common alternate specification of 'percent'...
+  if (p == "percentage") {
+    px <- (x - smin)/(smax-smin)*100
+  }
+
+
+  return(px)
 }

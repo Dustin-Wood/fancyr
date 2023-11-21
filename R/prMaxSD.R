@@ -8,6 +8,8 @@
 #' @details This is frequently valuable to identify people who did not
 #' vary their ratings substantially - which at extreme levels is generally indicative
 #' of insufficient effort responding.
+#' @references Dunn, A. M., Heggestad, E. D., Shanock, L. R., & Theilgard, N. (2018). Intra-individual response variability as an indicator of insufficient effort responding: Comparison to other indicators and relationships with individual differences. Journal of Business and Psychology, 33(1), 105–121.
+#' @references Wood, D., Harms, P., Lowman, G. H., & DeSimone, J. A. (2017). Response speed and response consistency as mutually validating indicators of data quality in online samples. Social Psychological and Personality Science, 8, 454–464.
 #'
 #' Note: prMaxSD = .25 would be observed on a 5-point scale from a person rating ALL
 #' items as 50\% one number and 50\% the adjacent number (e.g., 50\% 1's and 50\% 2's, or

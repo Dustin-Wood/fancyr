@@ -31,7 +31,8 @@ phatd <- function(x1, x2, adjust = T, posdef = F) {
   r_x1x2 <- corr.test(x1, x2, use="complete.obs", method="pearson", ci=F)
   r_xy_d <- (r_x1x2$r+t(r_x1x2$r))/2
 
-  #extract the reliabilities over the measurement period here:
+  #extract the retest correlations (i.e. - I would argue:, 'reliabilities')
+  #over the measurement period here:
   r_xx_d <- diag(r_xy_d)
   names(r_xx_d) <- rownames(r_xy_d)
 

@@ -10,6 +10,7 @@
 #' @export
 
 cx <- function(x, smin, smax) {
-  cx <- (x - (smax + smin)/2)/(smax-smin)*2
-  return(cx)
+    cx <- (x - (smax + smin)/2)/(smax-smin) * 2
+    return(cx)
 }
+

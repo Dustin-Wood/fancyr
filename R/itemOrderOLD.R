@@ -19,12 +19,10 @@
 #'
 #' @export
 
-
 itemOrder <- function(itemorder, delim = "\\|", numeric = T) {
   if(numeric == T) {
-    vorder2<-as.matrix(stringr::str_split(itemorder, pattern = delim, simplify = T))
+    vorder2<-t(apply(itemorder,1,function(x) as.numeric(stringr::str_split(x, pattern = delim, simplify = T))))
   } else {
-    #this needs to get fixed
     vorder2<-t(apply(itemorder,1,function(x) stringr::str_split(x, pattern = delim, simplify = T)))
   }
   return(vorder2)

@@ -22,10 +22,12 @@
 #' @export
 
 profileAnalysis <- function(profile1, profile2, smin, smax, qc = T) {
+
+  if(qc == T) {
   #transform both profiles 1 and 2 to a [-1,1] scale
   x1 <- fancyr::cx(profile1,smin,smax)
   x2 <- fancyr::cx(profile2,smin,smax)
-
+}
   #add reflected profiles around 0 if qc = T
   if(qc == T) {
     x1 <- cbind(x1,-x1)
