@@ -25,8 +25,12 @@ reflectedClusters <- function(itemRs, nclusters = 5) {
   groups$min <- as.numeric(apply(groups,1,min))
   #save 'original order with reversals
   groups$oowr <- row(groups[1])
+  #indicate the direction of the item
   #indicate whether the item is reverse-scored within the cluster it is assigned
-  groups$rev <- as.numeric(groups$oowr > .5*nrow(groups))
+    groups$rev <- as.numeric(groups$oowr > .5*nrow(groups))
+  #indicate the direction of scoring (1 = positive, -1 = negative association with cluster)
+    groups$dir <- 1-2*as.numeric(groups$oowr > .5*nrow(groups))
+
   #keep only one version of the item - the one in the first dendrogram
   groups2 <- subset(groups, group==min)
 
@@ -37,8 +41,8 @@ reflectedClusters <- function(itemRs, nclusters = 5) {
   #add the original variable names back in
   groups2$var <- colnames(itemRs)
 
-  finalgroups <- data.frame(groups2$var,groups2$min,groups2$rev)
-  colnames(finalgroups)<-c("variable","cluster","reversed")
+  finalgroups <- data.frame(groups2$var,groups2$min,groups2$dir)
+  colnames(finalgroups)<-c("variable","cluster","direction")
 
   #add size of each cluster (i.e., number of items included in each)
   nmembers<-as.data.frame(table(finalgroups$cluster))

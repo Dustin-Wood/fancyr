@@ -3,7 +3,7 @@
 #' This automates a set of procedures for finding clusters of items
 #' that relate in similar ways to a variable of interest.
 #'
-#' This should identify clusters of items that relates somewhat independently to the variable of interest.
+#' This should produce a set of factors that relates somewhat independently to the variable of interest
 #' @param x item set to be associated with the VOI.  It is suggested that items are placed on a [-1,1] range
 #' pprior to analysis to decrease the variability in cluster scores produced by missing values
 #'  (this can be done using the \code{cx} function)
@@ -17,10 +17,7 @@
 #'
 #' @export
 
-#improvements to work on for this function:
-#this currently does NOT make clusters from the partial correlation matrix, which it ultimately should
-
-voiClusters <- function(x, rvoi, threshold = .15, nk = 6, cname = "c", weight = "unit") {
+voiClusters <- function(x, rvoi, threshold = .15, nk = 6, cname = "c", weight = "unit", controls = NULL) {
 
 rsub <- subset(rvoi, abs(rvoi) > threshold)
 #make a restricted x dataset to items over the threshold association
