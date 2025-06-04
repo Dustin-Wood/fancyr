@@ -4,7 +4,7 @@
 \alias{setDepRDiffs}
 \title{Estimate How Two (Correlated) Variables Differ in Associations with a Set of Predictors}
 \usage{
-setDepRDiffs(predset, dvset, var2, var3)
+setDepRDiffs(predset, dvset, controls = NULL)
 }
 \arguments{
 \item{predset}{Set of 'Predictor' variables that will be associated with variables 2 and 3}

@@ -23,3 +23,13 @@ Participant scores (for the p2i matrix) should be on a [-1,1] scale
 prior to running this function; this can be
 done through the \code{cx} function within the \code{fancyr} package
 }
+\examples{
+# Can create the i2c variable by combining [-1,1] column indicating which items are reverse-scored with a column indicating scale the item is to be scored with:
+dir<-c(1,1,1,1,-1,1,1,1,1,1,-1,1,1,-1,1,-1,-1,-1,-1,-1,1,1,-1,1)
+scale<-c("Compassion","Commitment to the Public Interest","Self-sacrifice","Commitment to the Public Interest","Attraction to policy making","Self-sacrifice","Commitment to the Public Interest","Compassion","Compassion","Self-sacrifice","Attraction to policy making","Self-sacrifice","Compassion","Compassion","Self-sacrifice","Compassion","Attraction to policy making","Compassion","Self-sacrifice","Commitment to the Public Interest","Self-sacrifice","Commitment to the Public Interest","Compassion","Self-sacrifice")
+scale2<-dummy.code(scale)
+scale3 <- sweep(scale2, 1, dir, "*")
+
+
+
+}

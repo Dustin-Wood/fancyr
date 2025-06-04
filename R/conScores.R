@@ -9,6 +9,15 @@
 #'  (this can be done using the \code{cx} function)
 #' @param i2c items' coded indicativeness of the construct, on a [-1,1] metric (items-to-construct)
 #' @return Participant estimated construct scores, on [-1,1] range
+#' @examples
+#' # Can create the i2c variable by combining [-1,1] column indicating which items are reverse-scored with a column indicating scale the item is to be scored with:
+#' dir<-c(1,1,1,1,-1,1,1,1,1,1,-1,1,1,-1,1,-1,-1,-1,-1,-1,1,1,-1,1)
+#' scale<-c("scale1","scale2","scale3","scale2","scale4","scale3","scale2","scale1","scale1","scale3","scale4","scale3","scale1","scale1","scale3","scale1","scale4","scale1","scale3","scale2","scale3","scale2","scale1","scale3")
+#' scale2<-dummy.code(scale)
+#' i2c <- sweep(scale2, 1, dir, "*")
+
+#'
+#'
 #'
 #' @export
 
