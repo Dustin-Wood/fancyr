@@ -12,7 +12,8 @@
 #'
 #' Optionally, a set of control variables can be included as additional
 #' predictors of both X and Y2, partialling their effects from the focal
-#' selection and change coefficients.
+#' selection and change coefficients. Their effects on Y2 and X are returned
+#' in dedicated list elements.
 #'
 #' @param data A data frame containing all variables. Item columns should have
 #'   \code{y1ind} and \code{y2ind} suffixes (e.g., \code{"item[T1]"} and
@@ -34,6 +35,8 @@
 #' \item{XonY2_b2X}{Data frame of change effects (X -> Y2 | Y1) for each item.}
 #' \item{IndirectX_b2X1}{Data frame of indirect effects (Y1 -> X -> Y2) for each item.}
 #' \item{resStability_b21.X}{Data frame of residual stability (Y1 -> Y2 | X) for each item.}
+#' \item{controlEffects_Y2}{Data frame of control variable effects on Y2 for each item (NULL if no controls).}
+#' \item{controlEffects_X}{Data frame of control variable effects on X for each item (NULL if no controls).}
 #' \item{nobs}{Data frame of sample sizes for each item model.}
 #' \item{summary}{Wide data frame combining all effects for each item.}
 #'
@@ -71,7 +74,6 @@ medXonAllY <- function(data, items, X, y1ind = "[T1]", y2ind = "[T2]",
     d_cols <- c(y1col, y2col, X, controls)
     d <- data[, d_cols, drop = FALSE]
     names(d)[1:3] <- c("Y1", "Y2", "X")
-    # Rename control columns to sanitized names for lavaan
     if (!is.null(controls)) names(d)[4:ncol(d)] <- ctrl_safe
 
     if (zY) {
@@ -90,30 +92,47 @@ medXonAllY <- function(data, items, X, y1ind = "[T1]", y2ind = "[T2]",
       error = function(e) { message("Model failed for item '", item, "': ", e$message); NULL }
     )
 
-    if (is.null(fit)) {
-      return(data.frame(
-        item = item,
-        bX1 = NA, bX1_p = NA,
-        b2X = NA, b2X_p = NA,
-        indirect = NA, indirect_p = NA,
-        b21.X = NA, b21.X_p = NA,
-        n = NA
-      ))
+    # Build NA row (with control columns if needed)
+    na_row <- data.frame(
+      item = item,
+      bX1 = NA, bX1_p = NA,
+      b2X = NA, b2X_p = NA,
+      indirect = NA, indirect_p = NA,
+      b21.X = NA, b21.X_p = NA,
+      n = NA,
+      row.names = NULL
+    )
+    if (!is.null(ctrl_safe)) {
+      for (cn in ctrl_safe) {
+        na_row[[paste0(cn, "_Y2")]]   <- NA_real_
+        na_row[[paste0(cn, "_Y2_p")]] <- NA_real_
+        na_row[[paste0(cn, "_X")]]    <- NA_real_
+        na_row[[paste0(cn, "_X_p")]]  <- NA_real_
+      }
     }
 
+    if (is.null(fit)) return(na_row)
+
     pe <- lavaan::parameterestimates(fit)
-    get_est <- function(lbl) {
+
+    get_labeled <- function(lbl) {
       row <- pe[pe$label == lbl, ]
       if (nrow(row) == 0) return(c(est = NA_real_, p = NA_real_))
       c(est = row$est[1], p = row$pvalue[1])
     }
 
-    bX1   <- get_est("bX1")
-    b2X   <- get_est("b2X")
-    indir <- get_est("indirect")
-    b21.X <- get_est("b21.X")
+    get_path <- function(lhs, rhs) {
+      row <- pe[pe$lhs == lhs & pe$op == "~" & pe$rhs == rhs, ]
+      if (nrow(row) == 0) return(c(est = NA_real_, p = NA_real_))
+      c(est = row$est[1], p = row$pvalue[1])
+    }
 
-    data.frame(
+    bX1   <- get_labeled("bX1")
+    b2X   <- get_labeled("b2X")
+    indir <- get_labeled("indirect")
+    b21.X <- get_labeled("b21.X")
+
+    item_result <- data.frame(
       item       = item,
       bX1        = bX1["est"],
       bX1_p      = bX1["p"],
@@ -126,13 +145,38 @@ medXonAllY <- function(data, items, X, y1ind = "[T1]", y2ind = "[T2]",
       n          = lavaan::nobs(fit),
       row.names  = NULL
     )
+
+    # Append control effects on Y2 and X
+    if (!is.null(ctrl_safe)) {
+      for (cn in ctrl_safe) {
+        eff_y2 <- get_path("Y2", cn)
+        eff_x  <- get_path("X",  cn)
+        item_result[[paste0(cn, "_Y2")]]   <- eff_y2["est"]
+        item_result[[paste0(cn, "_Y2_p")]] <- eff_y2["p"]
+        item_result[[paste0(cn, "_X")]]    <- eff_x["est"]
+        item_result[[paste0(cn, "_X_p")]]  <- eff_x["p"]
+      }
+    }
+
+    item_result
   })
+
+  # Build focused control effect data frames
+  ctrl_Y2_cols <- if (!is.null(ctrl_safe)) {
+    c("item", as.vector(rbind(paste0(ctrl_safe, "_Y2"), paste0(ctrl_safe, "_Y2_p"))))
+  } else NULL
+
+  ctrl_X_cols <- if (!is.null(ctrl_safe)) {
+    c("item", as.vector(rbind(paste0(ctrl_safe, "_X"), paste0(ctrl_safe, "_X_p"))))
+  } else NULL
 
   list(
     Y1onX_bX1          = results[, c("item", "bX1", "bX1_p")],
     XonY2_b2X          = results[, c("item", "b2X", "b2X_p")],
     IndirectX_b2X1     = results[, c("item", "indirect", "indirect_p")],
     resStability_b21.X = results[, c("item", "b21.X", "b21.X_p")],
+    controlEffects_Y2  = if (!is.null(ctrl_Y2_cols)) results[, ctrl_Y2_cols] else NULL,
+    controlEffects_X   = if (!is.null(ctrl_X_cols))  results[, ctrl_X_cols]  else NULL,
     nobs               = results[, c("item", "n")],
     summary            = results
   )

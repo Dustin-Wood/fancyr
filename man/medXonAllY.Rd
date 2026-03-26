@@ -44,6 +44,8 @@ A named list with the following components:
 \item{XonY2_b2X}{Data frame of change effects (X -> Y2 | Y1) for each item.}
 \item{IndirectX_b2X1}{Data frame of indirect effects (Y1 -> X -> Y2) for each item.}
 \item{resStability_b21.X}{Data frame of residual stability (Y1 -> Y2 | X) for each item.}
+\item{controlEffects_Y2}{Data frame of control variable effects on Y2 for each item (NULL if no controls).}
+\item{controlEffects_X}{Data frame of control variable effects on X for each item (NULL if no controls).}
 \item{nobs}{Data frame of sample sizes for each item model.}
 \item{summary}{Wide data frame combining all effects for each item.}
 }
@@ -60,5 +62,6 @@ into a portion mediated by X and a residual direct path.
 
 Optionally, a set of control variables can be included as additional
 predictors of both X and Y2, partialling their effects from the focal
-selection and change coefficients.
+selection and change coefficients. Their effects on Y2 and X are returned
+in dedicated list elements.
 }
