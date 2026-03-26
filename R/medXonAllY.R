@@ -45,10 +45,16 @@ medXonAllY <- function(data, items, X, y1ind = "[T1]", y2ind = "[T2]",
 
   if (zX) data[[X]] <- scale(data[[X]])[, 1]
 
-  # Build control variable string for lavaan model (empty if no controls).
-  # Backtick-quote names to handle spaces or special characters.
-  ctrl_str <- if (!is.null(controls)) {
-    paste("+", paste(paste0("`", controls, "`"), collapse = " + "))
+  # Sanitize control names for lavaan (replace non-alphanumeric with _).
+  # Lavaan does not support backtick-quoting or spaces in variable names.
+  ctrl_safe <- if (!is.null(controls)) {
+    gsub("[^A-Za-z0-9_.]", "_", controls)
+  } else {
+    NULL
+  }
+
+  ctrl_str <- if (!is.null(ctrl_safe)) {
+    paste("+", paste(ctrl_safe, collapse = " + "))
   } else {
     ""
   }
@@ -65,6 +71,8 @@ medXonAllY <- function(data, items, X, y1ind = "[T1]", y2ind = "[T2]",
     d_cols <- c(y1col, y2col, X, controls)
     d <- data[, d_cols, drop = FALSE]
     names(d)[1:3] <- c("Y1", "Y2", "X")
+    # Rename control columns to sanitized names for lavaan
+    if (!is.null(controls)) names(d)[4:ncol(d)] <- ctrl_safe
 
     if (zY) {
       d$Y1 <- scale(d$Y1)[, 1]
