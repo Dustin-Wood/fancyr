@@ -11,8 +11,7 @@ medXonAllY(
   y1ind = "[T1]",
   y2ind = "[T2]",
   controls = NULL,
-  zY = FALSE,
-  zX = FALSE,
+  standardize = FALSE,
   return_estimates = TRUE
 )
 }
@@ -33,11 +32,8 @@ medXonAllY(
 \code{data}. When provided, these variables are added as predictors of
 both X and Y2 in each item's model. Defaults to \code{NULL} (no controls).}
 
-\item{zY}{Logical. If \code{TRUE}, standardize Y1 and Y2 columns before
-fitting models. Defaults to \code{FALSE}.}
-
-\item{zX}{Logical. If \code{TRUE}, standardize the X column before fitting
-models. Defaults to \code{FALSE}.}
+\item{standardize}{Logical. If \code{TRUE}, z-standardize Y1, Y2, X, and
+all control variables before fitting models. Defaults to \code{FALSE}.}
 
 \item{return_estimates}{Logical. If \code{TRUE} (default), include the full
 \code{lavaan::parameterestimates()} output for every item as a named list

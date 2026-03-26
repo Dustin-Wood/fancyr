@@ -23,10 +23,9 @@
 #' @param date_col Name of a date/datetime column in \code{T1_data} and
 #'   \code{T2_data} used to compute the measurement interval. Set to
 #'   \code{NULL} (default) to skip interval calculation.
-#' @param zY Logical. Passed to \code{\link{medXonAllY}}. Defaults to
-#'   \code{FALSE}.
-#' @param zX Logical. Passed to \code{\link{medXonAllY}}. Defaults to
-#'   \code{FALSE}.
+#' @param standardize Logical. If \code{TRUE}, z-standardize Y1, Y2, X, and
+#'   all control variables before fitting models. Passed to
+#'   \code{\link{medXonAllY}}. Defaults to \code{FALSE}.
 #' @param controls Character vector of control variable column names in
 #'   \code{T1_data}. When provided, these variables are carried through the
 #'   merge and passed to \code{\link{medXonAllY}} as additional predictors of
@@ -46,7 +45,7 @@
 #' @importFrom lubridate parse_date_time
 xEffects <- function(T1_data, T2_data, commonitems, xFile, xVar,
                      id_col = "id", date_col = NULL, controls = NULL,
-                     zY = FALSE, zX = FALSE, NA_to_0 = FALSE) {
+                     standardize = FALSE, NA_to_0 = FALSE) {
 
   # Subset to id + common items (+ controls if provided) for T1
   T1_sub <- T1_data[, c(id_col, commonitems, controls), drop = FALSE]
@@ -104,12 +103,11 @@ xEffects <- function(T1_data, T2_data, commonitems, xFile, xVar,
 
   # Run mediation analysis
   xEff <- medXonAllY(
-    data     = merged,
-    items    = commonitems,
-    X        = xVar,
-    controls = controls,
-    zY       = zY,
-    zX       = zX
+    data        = merged,
+    items       = commonitems,
+    X           = xVar,
+    controls    = controls,
+    standardize = standardize
   )
 
   list(

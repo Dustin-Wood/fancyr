@@ -46,8 +46,9 @@ Takes a single \code{parameterestimates()} data frame from \code{medXonAllY}
 (accessed via \code{xEffects$modelEstimates[["item name"]]}) and renders a
 standard mediation path diagram: X at top center, Y1 (baseline item score)
 at left, Y2 (follow-up item score) at right, and any control variables
-stacked below-left. Full item and experience variable labels are placed
-outside the nodes.
+stacked below-left. Covariances (Y1 with controls, and between controls)
+are drawn as curved dashed double-headed arrows arcing out to the left.
+Full item and experience variable labels are placed outside the nodes.
 }
 \examples{
 \dontrun{

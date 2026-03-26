@@ -25,10 +25,8 @@
 #' @param controls Character vector of control variable column names in
 #'   \code{data}. When provided, these variables are added as predictors of
 #'   both X and Y2 in each item's model. Defaults to \code{NULL} (no controls).
-#' @param zY Logical. If \code{TRUE}, standardize Y1 and Y2 columns before
-#'   fitting models. Defaults to \code{FALSE}.
-#' @param zX Logical. If \code{TRUE}, standardize the X column before fitting
-#'   models. Defaults to \code{FALSE}.
+#' @param standardize Logical. If \code{TRUE}, z-standardize Y1, Y2, X, and
+#'   all control variables before fitting models. Defaults to \code{FALSE}.
 #' @param return_estimates Logical. If \code{TRUE} (default), include the full
 #'   \code{lavaan::parameterestimates()} output for every item as a named list
 #'   in \code{$modelEstimates}.
@@ -48,10 +46,10 @@
 #' @importFrom lavaan sem parameterestimates nobs
 #' @importFrom purrr imap
 medXonAllY <- function(data, items, X, y1ind = "[T1]", y2ind = "[T2]",
-                       controls = NULL, zY = FALSE, zX = FALSE,
+                       controls = NULL, standardize = FALSE,
                        return_estimates = TRUE) {
 
-  if (zX) data[[X]] <- scale(data[[X]])[, 1]
+  if (standardize) data[[X]] <- scale(data[[X]])[, 1]
 
   # Sanitize control names for lavaan (replace non-alphanumeric with _).
   # Lavaan does not support backtick-quoting or spaces in variable names.
@@ -63,6 +61,21 @@ medXonAllY <- function(data, items, X, y1ind = "[T1]", y2ind = "[T2]",
 
   ctrl_str <- if (!is.null(ctrl_safe)) {
     paste("+", paste(ctrl_safe, collapse = " + "))
+  } else {
+    ""
+  }
+
+  # Covariance lines: Y1 with each control, and all pairs of controls
+  cov_str <- if (!is.null(ctrl_safe)) {
+    y1_covs <- paste(paste0("\n      Y1 ~~ ", ctrl_safe), collapse = "")
+    ctrl_pair_covs <- if (length(ctrl_safe) > 1) {
+      pairs <- combn(ctrl_safe, 2, simplify = FALSE)
+      paste(sapply(pairs, function(p) paste0("\n      ", p[1], " ~~ ", p[2])),
+            collapse = "")
+    } else {
+      ""
+    }
+    paste0(y1_covs, ctrl_pair_covs)
   } else {
     ""
   }
@@ -81,15 +94,18 @@ medXonAllY <- function(data, items, X, y1ind = "[T1]", y2ind = "[T2]",
     names(d)[1:3] <- c("Y1", "Y2", "X")
     if (!is.null(controls)) names(d)[4:ncol(d)] <- ctrl_safe
 
-    if (zY) {
+    if (standardize) {
       d$Y1 <- scale(d$Y1)[, 1]
       d$Y2 <- scale(d$Y2)[, 1]
+      if (!is.null(ctrl_safe)) {
+        for (cn in ctrl_safe) d[[cn]] <- scale(d[[cn]])[, 1]
+      }
     }
 
     model <- paste0("
       X ~ bX1 * Y1", ctrl_str, "
       Y2 ~ b2X * X + b21.X * Y1", ctrl_str, "
-      indirect := bX1 * b2X
+      indirect := bX1 * b2X", cov_str, "
     ")
 
     fit <- tryCatch(

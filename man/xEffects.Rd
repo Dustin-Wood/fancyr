@@ -13,8 +13,7 @@ xEffects(
   id_col = "id",
   date_col = NULL,
   controls = NULL,
-  zY = FALSE,
-  zX = FALSE,
+  standardize = FALSE,
   NA_to_0 = FALSE
 )
 }
@@ -45,11 +44,9 @@ frames. Defaults to \code{"id"}.}
 merge and passed to \code{\link{medXonAllY}} as additional predictors of
 both X and Y2 in each item's model. Defaults to \code{NULL} (no controls).}
 
-\item{zY}{Logical. Passed to \code{\link{medXonAllY}}. Defaults to
-\code{FALSE}.}
-
-\item{zX}{Logical. Passed to \code{\link{medXonAllY}}. Defaults to
-\code{FALSE}.}
+\item{standardize}{Logical. If \code{TRUE}, z-standardize Y1, Y2, X, and
+all control variables before fitting models. Passed to
+\code{\link{medXonAllY}}. Defaults to \code{FALSE}.}
 
 \item{NA_to_0}{Logical. If \code{TRUE}, recode the experience variable so
 that values equal to 1 remain 1 and all other values (including \code{NA})
