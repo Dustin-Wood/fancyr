@@ -20,7 +20,7 @@ Most importantly: statistical significance of the differences
 between all r(i,2) and r(i,3) associations
 }
 \description{
-This basically runs the psych package's \code(r.test) function
+This basically runs the psych package's \code{r.test} function
 through a set of 'predictor' variables to make it easier to find which variables
 within that set differ significantly in their associations with the two variables
 }

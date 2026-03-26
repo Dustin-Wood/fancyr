@@ -1,5 +1,5 @@
 #' Estimate How Two (Correlated) Variables Differ in Associations with a Set of Predictors
-#' @description This basically runs the psych package's \code(r.test) function
+#' @description This basically runs the psych package's \code{r.test} function
 #' through a set of 'predictor' variables to make it easier to find which variables
 #' within that set differ significantly in their associations with the two variables
 #' @param predset Set of 'Predictor' variables that will be associated with variables 2 and 3
