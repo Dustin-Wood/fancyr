@@ -45,9 +45,10 @@ medXonAllY <- function(data, items, X, y1ind = "[T1]", y2ind = "[T2]",
 
   if (zX) data[[X]] <- scale(data[[X]])[, 1]
 
-  # Build control variable string for lavaan model (empty if no controls)
+  # Build control variable string for lavaan model (empty if no controls).
+  # Backtick-quote names to handle spaces or special characters.
   ctrl_str <- if (!is.null(controls)) {
-    paste("+", paste(controls, collapse = " + "))
+    paste("+", paste(paste0("`", controls, "`"), collapse = " + "))
   } else {
     ""
   }
