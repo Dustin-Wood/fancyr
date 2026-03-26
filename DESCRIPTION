@@ -14,4 +14,10 @@ Description: This package includes a range of functions that are valuable
 License: What license is it under?
 Encoding: UTF-8
 LazyData: true
+Imports:
+    lavaan,
+    plyr,
+    purrr,
+    psych,
+    lubridate
 RoxygenNote: 7.2.3

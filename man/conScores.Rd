@@ -26,9 +26,9 @@ done through the \code{cx} function within the \code{fancyr} package
 \examples{
 # Can create the i2c variable by combining [-1,1] column indicating which items are reverse-scored with a column indicating scale the item is to be scored with:
 dir<-c(1,1,1,1,-1,1,1,1,1,1,-1,1,1,-1,1,-1,-1,-1,-1,-1,1,1,-1,1)
-scale<-c("Compassion","Commitment to the Public Interest","Self-sacrifice","Commitment to the Public Interest","Attraction to policy making","Self-sacrifice","Commitment to the Public Interest","Compassion","Compassion","Self-sacrifice","Attraction to policy making","Self-sacrifice","Compassion","Compassion","Self-sacrifice","Compassion","Attraction to policy making","Compassion","Self-sacrifice","Commitment to the Public Interest","Self-sacrifice","Commitment to the Public Interest","Compassion","Self-sacrifice")
+scale<-c("scale1","scale2","scale3","scale2","scale4","scale3","scale2","scale1","scale1","scale3","scale4","scale3","scale1","scale1","scale3","scale1","scale4","scale1","scale3","scale2","scale3","scale2","scale1","scale3")
 scale2<-dummy.code(scale)
-scale3 <- sweep(scale2, 1, dir, "*")
+i2c <- sweep(scale2, 1, dir, "*")
 
 
 
