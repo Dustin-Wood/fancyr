@@ -27,6 +27,10 @@
 #'   \code{FALSE}.
 #' @param zX Logical. Passed to \code{\link{medXonAllY}}. Defaults to
 #'   \code{FALSE}.
+#' @param controls Character vector of control variable column names in
+#'   \code{T1_data}. When provided, these variables are carried through the
+#'   merge and passed to \code{\link{medXonAllY}} as additional predictors of
+#'   both X and Y2 in each item's model. Defaults to \code{NULL} (no controls).
 #' @param NA_to_0 Logical. If \code{TRUE}, recode the experience variable so
 #'   that values equal to 1 remain 1 and all other values (including \code{NA})
 #'   become 0. Useful when the variable encodes presence/absence of an
@@ -41,14 +45,14 @@
 #' @importFrom psych corr.test
 #' @importFrom lubridate parse_date_time
 xEffects <- function(T1_data, T2_data, commonitems, xFile, xVar,
-                     id_col = "id", date_col = NULL,
+                     id_col = "id", date_col = NULL, controls = NULL,
                      zY = FALSE, zX = FALSE, NA_to_0 = FALSE) {
 
-  # Subset to id + common items for each wave
-  T1_sub <- T1_data[, c(id_col, commonitems), drop = FALSE]
+  # Subset to id + common items (+ controls if provided) for T1
+  T1_sub <- T1_data[, c(id_col, commonitems, controls), drop = FALSE]
   T2_sub <- T2_data[, c(id_col, commonitems), drop = FALSE]
 
-  # Apply [T1] / [T2] suffixes to item columns
+  # Apply [T1] / [T2] suffixes to item columns only (not controls)
   item_cols_t1 <- paste0(commonitems, "[T1]")
   item_cols_t2 <- paste0(commonitems, "[T2]")
   names(T1_sub)[names(T1_sub) %in% commonitems] <- item_cols_t1
@@ -100,11 +104,12 @@ xEffects <- function(T1_data, T2_data, commonitems, xFile, xVar,
 
   # Run mediation analysis
   xEff <- medXonAllY(
-    data  = merged,
-    items = commonitems,
-    X     = xVar,
-    zY    = zY,
-    zX    = zX
+    data     = merged,
+    items    = commonitems,
+    X        = xVar,
+    controls = controls,
+    zY       = zY,
+    zX       = zX
   )
 
   list(

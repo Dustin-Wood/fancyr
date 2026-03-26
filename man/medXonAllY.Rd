@@ -10,6 +10,7 @@ medXonAllY(
   X,
   y1ind = "[T1]",
   y2ind = "[T2]",
+  controls = NULL,
   zY = FALSE,
   zX = FALSE
 )
@@ -26,6 +27,10 @@ medXonAllY(
 \item{y1ind}{Suffix identifying T1 item columns. Defaults to \code{"[T1]"}.}
 
 \item{y2ind}{Suffix identifying T2 item columns. Defaults to \code{"[T2]"}.}
+
+\item{controls}{Character vector of control variable column names in
+\code{data}. When provided, these variables are added as predictors of
+both X and Y2 in each item's model. Defaults to \code{NULL} (no controls).}
 
 \item{zY}{Logical. If \code{TRUE}, standardize Y1 and Y2 columns before
 fitting models. Defaults to \code{FALSE}.}
@@ -52,4 +57,8 @@ The model treats X as a mediator of longitudinal change: selection into
 experiences (bX1) and experience-driven change (b2X) combine to form an
 indirect effect (bX1 * b2X). This partitions the Y1-Y2 stability coefficient
 into a portion mediated by X and a residual direct path.
+
+Optionally, a set of control variables can be included as additional
+predictors of both X and Y2, partialling their effects from the focal
+selection and change coefficients.
 }

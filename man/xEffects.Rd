@@ -12,6 +12,7 @@ xEffects(
   xVar,
   id_col = "id",
   date_col = NULL,
+  controls = NULL,
   zY = FALSE,
   zX = FALSE,
   NA_to_0 = FALSE
@@ -38,6 +39,11 @@ frames. Defaults to \code{"id"}.}
 \item{date_col}{Name of a date/datetime column in \code{T1_data} and
 \code{T2_data} used to compute the measurement interval. Set to
 \code{NULL} (default) to skip interval calculation.}
+
+\item{controls}{Character vector of control variable column names in
+\code{T1_data}. When provided, these variables are carried through the
+merge and passed to \code{\link{medXonAllY}} as additional predictors of
+both X and Y2 in each item's model. Defaults to \code{NULL} (no controls).}
 
 \item{zY}{Logical. Passed to \code{\link{medXonAllY}}. Defaults to
 \code{FALSE}.}
