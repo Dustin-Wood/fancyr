@@ -12,7 +12,8 @@ medXonAllY(
   y2ind = "[T2]",
   controls = NULL,
   zY = FALSE,
-  zX = FALSE
+  zX = FALSE,
+  return_estimates = TRUE
 )
 }
 \arguments{
@@ -37,6 +38,10 @@ fitting models. Defaults to \code{FALSE}.}
 
 \item{zX}{Logical. If \code{TRUE}, standardize the X column before fitting
 models. Defaults to \code{FALSE}.}
+
+\item{return_estimates}{Logical. If \code{TRUE} (default), include the full
+\code{lavaan::parameterestimates()} output for every item as a named list
+in \code{$modelEstimates}.}
 }
 \value{
 A named list with the following components:
@@ -48,6 +53,7 @@ A named list with the following components:
 \item{controlEffects_X}{Data frame of control variable effects on X for each item (NULL if no controls).}
 \item{nobs}{Data frame of sample sizes for each item model.}
 \item{summary}{Wide data frame combining all effects for each item.}
+\item{modelEstimates}{Named list of full \code{parameterestimates()} data frames, one per item. NULL if \code{return_estimates = FALSE}.}
 }
 \description{
 For each item in \code{items}, fits a lavaan SEM to estimate the selection

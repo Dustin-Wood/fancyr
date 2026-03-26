@@ -29,6 +29,9 @@
 #'   fitting models. Defaults to \code{FALSE}.
 #' @param zX Logical. If \code{TRUE}, standardize the X column before fitting
 #'   models. Defaults to \code{FALSE}.
+#' @param return_estimates Logical. If \code{TRUE} (default), include the full
+#'   \code{lavaan::parameterestimates()} output for every item as a named list
+#'   in \code{$modelEstimates}.
 #'
 #' @return A named list with the following components:
 #' \item{Y1onX_bX1}{Data frame of selection effects (Y1 -> X) for each item.}
@@ -39,12 +42,14 @@
 #' \item{controlEffects_X}{Data frame of control variable effects on X for each item (NULL if no controls).}
 #' \item{nobs}{Data frame of sample sizes for each item model.}
 #' \item{summary}{Wide data frame combining all effects for each item.}
+#' \item{modelEstimates}{Named list of full \code{parameterestimates()} data frames, one per item. NULL if \code{return_estimates = FALSE}.}
 #'
 #' @export
 #' @importFrom lavaan sem parameterestimates nobs
-#' @importFrom purrr imap_dfr
+#' @importFrom purrr imap
 medXonAllY <- function(data, items, X, y1ind = "[T1]", y2ind = "[T2]",
-                       controls = NULL, zY = FALSE, zX = FALSE) {
+                       controls = NULL, zY = FALSE, zX = FALSE,
+                       return_estimates = TRUE) {
 
   if (zX) data[[X]] <- scale(data[[X]])[, 1]
 
@@ -62,13 +67,13 @@ medXonAllY <- function(data, items, X, y1ind = "[T1]", y2ind = "[T2]",
     ""
   }
 
-  results <- purrr::imap_dfr(items, function(item, idx) {
+  raw <- purrr::imap(items, function(item, idx) {
     y1col <- paste0(item, y1ind)
     y2col <- paste0(item, y2ind)
 
     if (!y1col %in% names(data) || !y2col %in% names(data)) {
       warning("Columns not found for item: ", item, ". Skipping.")
-      return(NULL)
+      return(list(row = NULL, pe = NULL))
     }
 
     d_cols <- c(y1col, y2col, X, controls)
@@ -111,7 +116,7 @@ medXonAllY <- function(data, items, X, y1ind = "[T1]", y2ind = "[T2]",
       }
     }
 
-    if (is.null(fit)) return(na_row)
+    if (is.null(fit)) return(list(row = na_row, pe = NULL))
 
     pe <- lavaan::parameterestimates(fit)
 
@@ -146,7 +151,6 @@ medXonAllY <- function(data, items, X, y1ind = "[T1]", y2ind = "[T2]",
       row.names  = NULL
     )
 
-    # Append control effects on Y2 and X
     if (!is.null(ctrl_safe)) {
       for (cn in ctrl_safe) {
         eff_y2 <- get_path("Y2", cn)
@@ -158,8 +162,15 @@ medXonAllY <- function(data, items, X, y1ind = "[T1]", y2ind = "[T2]",
       }
     }
 
-    item_result
+    list(row = item_result, pe = pe)
   })
+
+  # Name raw list by item for modelEstimates
+  names(raw) <- items
+
+  # Combine summary rows
+  results <- do.call(rbind, lapply(raw, `[[`, "row"))
+  rownames(results) <- NULL
 
   # Build focused control effect data frames
   ctrl_Y2_cols <- if (!is.null(ctrl_safe)) {
@@ -170,6 +181,13 @@ medXonAllY <- function(data, items, X, y1ind = "[T1]", y2ind = "[T2]",
     c("item", as.vector(rbind(paste0(ctrl_safe, "_X"), paste0(ctrl_safe, "_X_p"))))
   } else NULL
 
+  # Collect full parameterestimates per item
+  model_estimates <- if (return_estimates) {
+    lapply(raw, `[[`, "pe")
+  } else {
+    NULL
+  }
+
   list(
     Y1onX_bX1          = results[, c("item", "bX1", "bX1_p")],
     XonY2_b2X          = results[, c("item", "b2X", "b2X_p")],
@@ -178,6 +196,7 @@ medXonAllY <- function(data, items, X, y1ind = "[T1]", y2ind = "[T2]",
     controlEffects_Y2  = if (!is.null(ctrl_Y2_cols)) results[, ctrl_Y2_cols] else NULL,
     controlEffects_X   = if (!is.null(ctrl_X_cols))  results[, ctrl_X_cols]  else NULL,
     nobs               = results[, c("item", "n")],
-    summary            = results
+    summary            = results,
+    modelEstimates     = model_estimates
   )
 }
