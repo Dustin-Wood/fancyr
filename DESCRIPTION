@@ -10,8 +10,8 @@ Description: Provides functions for correlational and measurement analyses,
     data screening utilities (e.g., proportion of maximum possible standard deviation),
     and data transformations (e.g., POMP scores and scale-center-deviation scores).
 License: GPL-3
-URL: https://github.com/DustinWood/fancyr
-BugReports: https://github.com/DustinWood/fancyr/issues
+URL: https://github.com/Dustin-Wood/fancyr
+BugReports: https://github.com/Dustin-Wood/fancyr/issues
 Encoding: UTF-8
 Imports:
     lavaan,
