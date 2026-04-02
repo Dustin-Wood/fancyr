@@ -9,11 +9,11 @@ setDepRDiffs(predset, dvset, controls = NULL)
 \arguments{
 \item{predset}{Set of 'Predictor' variables that will be associated with variables 2 and 3}
 
-\item{dvset}{Set the Outcome variables will be coming from}
+\item{dvset}{Set the Outcome variables will be coming from (first two columns are used as the
+dependent variables to be compared)}
 
-\item{var2}{name of Variable 2 (as text, a la "variable")}
-
-\item{var3}{name of Variable 3 (as text, a la "variable")}
+\item{controls}{Optional data frame of control variables. If provided, partial correlations
+are computed controlling for these variables. Defaults to \code{NULL}.}
 }
 \value{
 Most importantly: statistical significance of the differences

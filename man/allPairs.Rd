@@ -4,11 +4,14 @@
 \alias{allPairs}
 \title{Make a Dataframe with all Combinations of Measurements Made on a Single Person}
 \usage{
-allPairs(pmRatingData)
+allPairs(data, double = FALSE)
 }
 \arguments{
 \item{data}{The data that will be transformed
 (should be in \code{c(p,m,ratings...)} format.)}
+
+\item{double}{If \code{TRUE}, each pair is included twice (once in each order).
+Defaults to \code{FALSE}.}
 }
 \value{
 a dataframe where all possible pairwise combinations of different measurements

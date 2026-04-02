@@ -4,21 +4,23 @@ Title: Fancy Statistics for Correlational (r) Analyses
 Version: 0.1.0
 Author: Dustin Wood
 Maintainer: Dustin Wood <dustin.wood@cba.ua.edu>
-Description: This package includes a range of functions that are valuable 
-    for correlational analyses, including:
-    - Creating matrices in which reliability over the measurement interval (t) is adjusted
-    - Creating 'scale-centered' correlations (see Cohen, 1969)
-    - Creating clusters of highly correlating synonyms and antonyms (together)
-    - Some useful indices for data screening (e.g., percentage missing values; response variability
-    - useful data transformations (e.g., proportion, POMP, and 'standard scale-center-deviation scores')
-License: What license is it under?
+Description: Provides functions for correlational and measurement analyses,
+    including reliability-adjusted correlation matrices, scale-centered correlations
+    (Cohen, 1969), clusters of validity-relevant items, dimensionality assessment,
+    data screening utilities (e.g., proportion of maximum possible standard deviation),
+    and data transformations (e.g., POMP scores and scale-center-deviation scores).
+License: GPL-3
+URL: https://github.com/DustinWood/fancyr
+BugReports: https://github.com/DustinWood/fancyr/issues
 Encoding: UTF-8
-LazyData: true
 Imports:
     lavaan,
+    Matrix,
     plyr,
-    purrr,
     psych,
+    purrr,
     lubridate,
-    qgraph
+    qgraph,
+    stringr,
+    tidyr
 RoxygenNote: 7.3.3

@@ -4,7 +4,7 @@
 \alias{profileAnalysis}
 \title{Profile Correlation Analyses}
 \usage{
-profileAnalysis(profile1, profile2, smin, smax, qc = T)
+profileAnalysis(profile1, profile2, smin, smax, qc = TRUE)
 }
 \arguments{
 \item{profile1}{First profile}

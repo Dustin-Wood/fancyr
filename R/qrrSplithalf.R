@@ -2,11 +2,17 @@
 #' @description TBD
 #' @param set Set of variables and scores you wish to perform analysis on
 #' @param sims A numeric specifying the number of random splithalves to generate.
+#' @param graph Logical. If \code{TRUE}, plots a histogram of split-half correlations.
+#' Defaults to \code{FALSE}.
+#' @param CI Confidence interval width for reporting (e.g., \code{0.95} for 95\% CI).
+#' Defaults to \code{0.95}.
+#' @param minval Minimum value threshold. Defaults to \code{-1.0}.
+#' @param seed Optional random seed for reproducibility. Defaults to \code{FALSE} (no seed set).
 #' @returns List of all separate split-half correlation vector correlation matrices
 #' @export
 
 
-qrrSplithalf <-function(set, sims=100, graph=FALSE, CI=.95, minval=-1.0, seed=F) {
+qrrSplithalf <- function(set, sims=100, graph=FALSE, CI=.95, minval=-1.0, seed=FALSE) {
     comp.data <- subset(set, complete.cases(set))
     N <- nrow(comp.data)
     half.N <- N/2
@@ -14,7 +20,7 @@ qrrSplithalf <-function(set, sims=100, graph=FALSE, CI=.95, minval=-1.0, seed=F)
     LL <- (1 - CI) / 2
     UL <- 1 - LL
 
-    if(seed!=F) {set.seed(seed)}
+    if(seed!=FALSE) {set.seed(seed)}
 
       # my adaptation, for saving all the resulting matrices.
       #  Changes noted, with rationale given:
@@ -34,7 +40,7 @@ qrrSplithalf <-function(set, sims=100, graph=FALSE, CI=.95, minval=-1.0, seed=F)
         #and maybe doesn't apply if we are returning many matrices rather than a single correlation
       Up.r <- Reduce("+", storer) / length(storer)
 
-      if(graph==T) {
+      if(graph==TRUE) {
         op <- par(las=1, font.main=1)
         hist(storer, main="Histogram of Split-Half rs for Corrs", xlab="Split-Half r Values", ylab="Frequency", col="cyan")
         abline(v=Up.r, col="red")

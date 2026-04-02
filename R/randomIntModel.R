@@ -3,9 +3,6 @@
 #' This provides code that should run a pretty agnostic 'random intercept model' in
 #' \code{lavaan}, in much the manner detailed by Mehta & Neale (2005, Figure 3).
 #' @param varset the set of variables you want to include in the null model
-#' @usage
-#' randomIntModel(pmRatingData[3:ncol(pmRatingData)]) #if first two variables
-#' are 'p' and 'm' and all the remaining variables are variable ratings
 #' @details
 #' Unfortunately, there is a good chance that if you have a large number of
 #' variables (or perhaps a large number of clusters, or observations within clusters, or...

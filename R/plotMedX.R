@@ -115,23 +115,25 @@ plotMedX <- function(pe, item_label, x_label,
   node_labels <- c("Y1", "X", "Y2", paste0("C", seq_len(n_ctrl)))
 
   # ── 5. Regression-only edge list (covariances drawn manually later) ───────────
-  edges   <- list()
-  elabels <- character(0)
-
-  add_edge <- function(from_name, to_name, path_info) {
-    if (!is.na(path_info$est)) {
-      edges[[length(edges) + 1]] <<- c(idx[from_name], idx[to_name])
-      elabels <<- c(elabels, fmt(path_info))
-    }
+  make_edge <- function(from_name, to_name, path_info) {
+    if (is.na(path_info$est)) return(NULL)
+    list(edge = c(idx[from_name], idx[to_name]), label = fmt(path_info))
   }
 
-  add_edge("Y1", "X",  bX1)
-  add_edge("X",  "Y2", b2X)
-  add_edge("Y1", "Y2", b21)
+  edge_list <- Filter(Negate(is.null), list(
+    make_edge("Y1", "X",  bX1),
+    make_edge("X",  "Y2", b2X),
+    make_edge("Y1", "Y2", b21)
+  ))
   for (i in seq_along(ctrl_names)) {
-    add_edge(ctrl_names[i], "X",  ctrl_to_X[[i]])
-    add_edge(ctrl_names[i], "Y2", ctrl_to_Y2[[i]])
+    r <- make_edge(ctrl_names[i], "X",  ctrl_to_X[[i]])
+    if (!is.null(r)) edge_list <- c(edge_list, list(r))
+    r <- make_edge(ctrl_names[i], "Y2", ctrl_to_Y2[[i]])
+    if (!is.null(r)) edge_list <- c(edge_list, list(r))
   }
+
+  edges   <- lapply(edge_list, `[[`, "edge")
+  elabels <- sapply(edge_list, `[[`, "label")
 
   edge_mat <- do.call(rbind, edges)
 

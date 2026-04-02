@@ -3,9 +3,10 @@
 #' through a set of 'predictor' variables to make it easier to find which variables
 #' within that set differ significantly in their associations with the two variables
 #' @param predset Set of 'Predictor' variables that will be associated with variables 2 and 3
-#' @param dvset Set the Outcome variables will be coming from
-#' @param var2 name of Variable 2 (as text, a la "variable")
-#' @param var3 name of Variable 3 (as text, a la "variable")
+#' @param dvset Set the Outcome variables will be coming from (first two columns are used as the
+#' dependent variables to be compared)
+#' @param controls Optional data frame of control variables. If provided, partial correlations
+#' are computed controlling for these variables. Defaults to \code{NULL}.
 #' @return Most importantly: statistical significance of the differences
 #' between all r(i,2) and r(i,3) associations
 #'
@@ -16,12 +17,12 @@ setDepRDiffs <- function(predset, dvset, controls = NULL) {
 var2<-colnames(dvset)[1]
 var3<-colnames(dvset)[2]
 if(is.null(controls)) {
-  cors<-corr.test(cbind(predset,dvset), use = "complete")
+  cors<-psych::corr.test(cbind(predset,dvset), use = "complete")
 } else {
   test_data <- cbind(predset,dvset,controls)
-  rs <- corr.test(test_data, ci = FALSE)
-  pars <- partial.r(data = test_data, x = 1:ncol(test_data), y = colnames(controls))
-  cors <- corr.p(pars, n = (rs$n - length(controls)), adjust = "none", ci = FALSE)
+  rs <- psych::corr.test(test_data, ci = FALSE)
+  pars <- psych::partial.r(data = test_data, x = 1:ncol(test_data), y = colnames(controls))
+  cors <- psych::corr.p(pars, n = (rs$n - length(controls)), adjust = "none", ci = FALSE)
 }
 
   #what contrast do you want?
@@ -41,5 +42,3 @@ if(is.null(controls)) {
   deprs2$var <- colnames(predset)
   return(deprs2)
 }
-
-

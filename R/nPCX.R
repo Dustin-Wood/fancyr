@@ -5,6 +5,7 @@
 #' Note that 'measured' is intended to mean here that a dimension is only measured if it has an
 #' R^2 value of 1.00.  So statistic provides the sum of R2 for orthogonal dimensions, via PCA.
 #' @param rMat Correlation matrix
+#' @param rotate Rotation method passed to \code{psych::principal()}. Defaults to \code{"none"}.
 #' @details The correlation matrix should have correct reliability values on the diagonals (ideally,
 #' the value will be estimates of the retest values over the same measurement interval as typical for
 #' inter-item correlations within the matrix; see Wood, Lowman, Armstrong, & Harms, 2022).  If
@@ -16,12 +17,15 @@
 #' @return (describe)
 #' @export
 #' @examples
-#' subdata <- subset(datafile, prMaxSD > .05)
+#' \donttest{
+#' rmat <- cor(attitude)
+#' nPCX(rmat)
+#' }
 
 
 nPCX <- function(rMat, rotate = "none") {
 #conduct principal components analysis (PCA)
-rfactors<-psych::principal(rMat,covar=T, nfactors = ncol(rMat), rotate = rotate)
+rfactors<-psych::principal(rMat,covar=TRUE, nfactors = ncol(rMat), rotate = rotate)
   floadings<-unclass(rfactors$loadings) #extract factor loadings
 
 #bind factor loadings to original correlation matrix
@@ -37,7 +41,7 @@ model<-paste0(colnames(floadings)," ~ ",x,colnames(rMat)[ncol(rMat)]," \n")
 
 #smooth into a positive-definite matrix using Higham's (2002) adjustment
   #(*I found this needed to be done in order to have lavaan run on example datasets involving perfect correlations)
-bigmat<-data.matrix(Matrix::nearPD(bigmat, corr=T, keepDiag = TRUE)$mat)
+bigmat<-data.matrix(Matrix::nearPD(bigmat, corr=TRUE, keepDiag = TRUE)$mat)
 
 #predict each principal component from all other items in the set
 fit<-lavaan::sem(model,sample.cov = bigmat, sample.nobs = 1000)

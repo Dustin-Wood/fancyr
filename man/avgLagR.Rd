@@ -4,8 +4,7 @@
 \alias{avgLagR}
 \title{Average Lag Correlation over Over Measurement Interval, r_|d|}
 \usage{
-avgLagR(x1, x2)
-phat.t(x1, x2, posdef = "Higham")
+avgLagR(x1, x2, posdef = FALSE)
 }
 \arguments{
 \item{x1}{first matrix to be used to estimate correlations}

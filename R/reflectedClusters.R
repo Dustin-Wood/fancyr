@@ -4,7 +4,8 @@
 #' all 'reflected items'.  This allows clusters to be formed containing
 #' antonymous content
 #'
-#' @param corrs the correlation matrix including all correlations between variables in the item set
+#' @param itemRs the correlation matrix including all correlations between variables in the item set
+#' @param nclusters the number of clusters to extract. Defaults to 5.
 #'
 #' @export
 reflectedClusters <- function(itemRs, nclusters = 5) {
@@ -54,4 +55,3 @@ reflectedClusters <- function(itemRs, nclusters = 5) {
   names(reflectedClusters)<-c("clusters","dendro")
   return(reflectedClusters)
 }
-

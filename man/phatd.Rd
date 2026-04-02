@@ -4,9 +4,7 @@
 \alias{phatd}
 \title{Reliability-adjusted Correlations Over a Measurement Interval (d)}
 \usage{
-phat.t(x1, x2)
-phat.t(x1, x2, posdef = "Higham")
-phat.t(x1, x2, adjust = F, posdef = "Higham") #don't adjust for retest reliability
+phatd(x1, x2, adjust = TRUE, posdef = FALSE)
 }
 \arguments{
 \item{x1}{first matrix to be used to estimate correlations}

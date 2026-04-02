@@ -8,8 +8,6 @@
 #' @param x matrix to be used for correlations
 #' @param mid Scale midpoint (default if not given = 0)
 #' @param margin Specify whether correlations are of rows=1 or columns = 2 (default is columns)
-#' @usage
-#' ccor(x, mid = 3) #e.g., midpoint of standard 1-5 Likert scale is 3
 #' @details
 #' Function computes Cohen-adjusted correlations (or avg. product of standardized deviations-from-scale-center)
 #' @return Scale-center correlations (\code{r_c})
@@ -26,4 +24,3 @@ ccor <- function(x, mid = 0, margin=2) {
   dimnames(ccor)<-list(colnames(x),colnames(x))
   return(ccor)
 }
-

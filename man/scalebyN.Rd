@@ -4,7 +4,7 @@
 \alias{scalebyN}
 \title{Scale by N}
 \usage{
-scalebyN(x, center = T, scale = T)
+scalebyN(x, center = TRUE, scale = TRUE)
 }
 \arguments{
 \item{x}{matrix containing set of scores to be transformed}

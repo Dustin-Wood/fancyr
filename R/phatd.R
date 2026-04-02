@@ -14,10 +14,6 @@
 #' order, but rated at different times.  For instance, \code{x1} and \code{x2} may be the first
 #' and second administrations of the items in some personality inventory a year
 #' apart (or: a month, a day, etc).
-#' @usage
-#' phat.t(x1, x2)
-#' phat.t(x1, x2, posdef = "Higham")
-#' phat.t(x1, x2, adjust = F, posdef = "Higham") #don't adjust for retest reliability
 #' @param x1 first matrix to be used to estimate correlations
 #' @param x2 second matrix to be used (all variables should be the same as x1, and in the same order!!)
 #' @param adjust adjust correlations for retest reliability? Defaults to TRUE
@@ -25,10 +21,8 @@
 #'
 #' @export
 
-phatd <- function(x1, x2, adjust = T, posdef = F) {
-  library(psych) #this function utilizes two functions from 'psych' package
-
-  r_x1x2 <- corr.test(x1, x2, use="complete.obs", method="pearson", ci=F)
+phatd <- function(x1, x2, adjust = TRUE, posdef = FALSE) {
+  r_x1x2 <- psych::corr.test(x1, x2, use="complete.obs", method="pearson", ci=FALSE)
   r_xy_d <- (r_x1x2$r+t(r_x1x2$r))/2
 
   #extract the retest correlations (i.e. - I would argue:, 'reliabilities')
@@ -36,14 +30,14 @@ phatd <- function(x1, x2, adjust = T, posdef = F) {
   r_xx_d <- diag(r_xy_d)
   names(r_xx_d) <- rownames(r_xy_d)
 
-  if (adjust == T) {
+  if (adjust == TRUE) {
     #adjust the r_xy_d matrix for retest correlations over that interval
 
     r_ExEy_d <- solve(diag(r_xx_d^.5))%*%r_xy_d%*%solve(diag(r_xx_d^.5))
     dimnames(r_ExEy_d)<-dimnames(r_xy_d)
   }
 
-  if (adjust != T) {
+  if (adjust != TRUE) {
     r_ExEy_d <- r_xy_d
   }
 
@@ -60,7 +54,7 @@ phatd <- function(x1, x2, adjust = T, posdef = F) {
     #smooth into positive-definite matrix using Bock, Gibbons and Muraki (1988) and Wothke (1993) adjustment
     #note: this particular adjustment doesn't seem to play well with the unadjusted r_xy_d matrix (i.e., where diagonals do not equal 1)
     #it seems it is not designed to handle covariance rather than correlation matrices.
-    r_ExEy_d<-cor.smooth(r_ExEy_d)
+    r_ExEy_d<-psych::cor.smooth(r_ExEy_d)
   }
 
   return(r_ExEy_d)

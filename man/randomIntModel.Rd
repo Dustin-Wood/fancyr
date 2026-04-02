@@ -4,8 +4,7 @@
 \alias{randomIntModel}
 \title{Make a 'Random Intercept Model' for MSEM analysis in lavaan}
 \usage{
-randomIntModel(pmRatingData[3:ncol(pmRatingData)]) #if first two variables
-are 'p' and 'm' and all the remaining variables are variable ratings
+randomIntModel(varset)
 }
 \arguments{
 \item{varset}{the set of variables you want to include in the null model}

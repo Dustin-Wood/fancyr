@@ -4,12 +4,29 @@
 \alias{qrrSplithalf}
 \title{Split-Half Correlation Vector Correlation Matrix}
 \usage{
-qrrSplithalf(set, sims = 100, graph = FALSE, CI = 0.95, minval = -1, seed = F)
+qrrSplithalf(
+  set,
+  sims = 100,
+  graph = FALSE,
+  CI = 0.95,
+  minval = -1,
+  seed = FALSE
+)
 }
 \arguments{
 \item{set}{Set of variables and scores you wish to perform analysis on}
 
 \item{sims}{A numeric specifying the number of random splithalves to generate.}
+
+\item{graph}{Logical. If \code{TRUE}, plots a histogram of split-half correlations.
+Defaults to \code{FALSE}.}
+
+\item{CI}{Confidence interval width for reporting (e.g., \code{0.95} for 95\% CI).
+Defaults to \code{0.95}.}
+
+\item{minval}{Minimum value threshold. Defaults to \code{-1.0}.}
+
+\item{seed}{Optional random seed for reproducibility. Defaults to \code{FALSE} (no seed set).}
 }
 \value{
 List of all separate split-half correlation vector correlation matrices

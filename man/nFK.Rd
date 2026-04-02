@@ -10,6 +10,8 @@ nFK(rMat, rotate = "none")
 \item{rMat}{Correlation matrix (with appropriate reliabilities on diagonal)
 The correlation matrix should have a unique name for each variable, and these
 variable names should be a single word or string (no spaces).  Can check with \code{colnames(rMat)}}
+
+\item{rotate}{Rotation method passed to \code{psych::principal()}. Defaults to \code{"none"}.}
 }
 \value{
 returns:

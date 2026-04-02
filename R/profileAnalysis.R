@@ -21,22 +21,22 @@
 #'
 #' @export
 
-profileAnalysis <- function(profile1, profile2, smin, smax, qc = T) {
+profileAnalysis <- function(profile1, profile2, smin, smax, qc = TRUE) {
 
-  if(qc == T) {
+  if(qc == TRUE) {
   #transform both profiles 1 and 2 to a [-1,1] scale
   x1 <- fancyr::cx(profile1,smin,smax)
   x2 <- fancyr::cx(profile2,smin,smax)
 }
   #add reflected profiles around 0 if qc = T
-  if(qc == T) {
+  if(qc == TRUE) {
     x1 <- cbind(x1,-x1)
     x2 <- cbind(x2,-x2)
   }
 
   #compute means
-  m1 <- colMeans(x1, na.rm = T)
-  m2 <- colMeans(x2, na.rm = T)
+  m1 <- colMeans(x1, na.rm = TRUE)
+  m2 <- colMeans(x2, na.rm = TRUE)
 
   #compute mean deviations
   d1 <-  apply(x1, 2, function(x) x - mean(x, na.rm=TRUE))

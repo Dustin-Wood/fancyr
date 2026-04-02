@@ -7,14 +7,14 @@
 #' identifier are the first two columns of your dataset.
 #' @param data The data that will be transformed
 #' (should be in \code{c(p,m,ratings...)} format.)
-#' @usage
-#' allPairs(pmRatingData)
+#' @param double If \code{TRUE}, each pair is included twice (once in each order).
+#' Defaults to \code{FALSE}.
 #' @return a dataframe where all possible pairwise combinations of different measurements
 #' are given on separate lines
 #'
 #' @export
 
-allPairs <- function(data, double = F) {
+allPairs <- function(data, double = FALSE) {
   #for each person, create numerical m
   #ranging from 1 to number of measurements
   #for person p (ordered first to last)
@@ -47,7 +47,7 @@ allPairs <- function(data, double = F) {
   #remove "nm" and "d.nm" columns that were added to help with matching
   pdata <- subset(pdata, select = -c(nm,d.nm))
 
-  if(double == T) {
+  if(double == TRUE) {
     yDbl <- data.frame(pdata[1],pdata[(((ncol(pdata)+1)/2)+1):ncol(pdata)],pdata[2:((ncol(pdata)+1)/2)])
     colnames(yDbl) <- colnames(pdata)
     pdata <- rbind(pdata,yDbl)
@@ -55,4 +55,3 @@ allPairs <- function(data, double = F) {
 
   return(pdata)
 }
-

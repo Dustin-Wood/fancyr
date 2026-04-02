@@ -7,7 +7,9 @@
 reflectedClusters(itemRs, nclusters = 5)
 }
 \arguments{
-\item{corrs}{the correlation matrix including all correlations between variables in the item set}
+\item{itemRs}{the correlation matrix including all correlations between variables in the item set}
+
+\item{nclusters}{the number of clusters to extract. Defaults to 5.}
 }
 \description{
 Estimate the clusters from an item set, but do so only after including

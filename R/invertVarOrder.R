@@ -5,11 +5,8 @@
 #' item #1, #2, etc.
 #' @param pByOrder dataframe containing participant ID as column 1, and then columns describing
 #' which item was rated first, second, etc
-#' @param vOrder specify the order you would like the variables to be ordered (this is necessarily
+#' @param vorder specify the order you would like the variables to be ordered (this is necessarily
 #' mainly if the cells of the pByOrder matrix are variable names rather than variable NUMBERS)
-#' @usage
-#' invertVarOrder(pByOrder)
-#' invertVarOrder(pByOrder, vorder = pscores)
 #' @return A participant-by-item matrix detailing when participant rated each item
 #'
 #' @export

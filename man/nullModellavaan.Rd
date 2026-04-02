@@ -4,7 +4,7 @@
 \alias{nullModellavaan}
 \title{Make a 'Null' model for MSEM analysis in lavaan}
 \usage{
-nullModellavaan(pmRatingData[3:ncol(pmRatingData)]) #if first two variables are 'p' and 'm' and all the remaining variables are variable ratings
+nullModellavaan(varset)
 }
 \arguments{
 \item{varset}{the set of variables you want to include in the null model}

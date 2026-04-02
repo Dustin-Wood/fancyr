@@ -5,11 +5,12 @@
 #' @param data Matrix to be transformed (often will need to specify subset of larger dataframe)
 #' @param smin Scale minimum
 #' @param smax Scale maximum
+#' @param dir Direction argument passed to \code{apply()}: 1 = rows (default), 2 = columns
 #' @details This is frequently valuable to identify people who did not
 #' vary their ratings substantially - which at extreme levels is generally indicative
 #' of insufficient effort responding.
-#' @references Dunn, A. M., Heggestad, E. D., Shanock, L. R., & Theilgard, N. (2018). Intra-individual response variability as an indicator of insufficient effort responding: Comparison to other indicators and relationships with individual differences. Journal of Business and Psychology, 33(1), 105–121.
-#' @references Wood, D., Harms, P., Lowman, G. H., & DeSimone, J. A. (2017). Response speed and response consistency as mutually validating indicators of data quality in online samples. Social Psychological and Personality Science, 8, 454–464.
+#' @references Dunn, A. M., Heggestad, E. D., Shanock, L. R., & Theilgard, N. (2018). Intra-individual response variability as an indicator of insufficient effort responding: Comparison to other indicators and relationships with individual differences. Journal of Business and Psychology, 33(1), 105-121.
+#' @references Wood, D., Harms, P., Lowman, G. H., & DeSimone, J. A. (2017). Response speed and response consistency as mutually validating indicators of data quality in online samples. Social Psychological and Personality Science, 8, 454-464.
 #'
 #' Note: prMaxSD = .25 would be observed on a 5-point scale from a person rating ALL
 #' items as 50\% one number and 50\% the adjacent number (e.g., 50\% 1's and 50\% 2's, or
@@ -22,16 +23,19 @@
 #' of the row scores from max possible (range from 0 to 1)
 #' @export
 #' @examples
-#' #combine with subset function to remove people with
-#' #less than 30% of the maximum possible SD over this range
-#' #(an indicator of invariant or insufficient effort responding)
-#' datafile$prMaxSD <- prMaxSD(datafile[varSet], 1, 5)
-#' subdata <- subset(datafile, prMaxSD > .25)
+#' # Three respondents rating 5 items on a 1-5 scale
+#' mat <- matrix(c(1, 2, 3, 4, 5,   # variable responder
+#'                 3, 3, 3, 3, 3,   # straight-liner
+#'                 1, 5, 1, 5, 1),  # highly variable
+#'               nrow = 3, byrow = TRUE)
+#' prMaxSD(mat, smin = 1, smax = 5)
+#'
+#' # Filter out low-variability respondents (prMaxSD < .25)
+#' scores <- prMaxSD(mat, smin = 1, smax = 5)
+#' mat[scores >= .25, ]
 
 prMaxSD <- function(data, smin, smax, dir=1) {
-  sd.p <- function(x) { sd(as.matrix(x), na.rm = T)}
+  sd.p <- function(x) { sd(as.matrix(x), na.rm = TRUE) }
   prMaxSD <- apply(data, dir, function(x) sd.p(x)*sqrt((sum(!is.na(x))-1)/sum(!is.na(x)))/((smax-smin)/2))
   return(prMaxSD)
 }
-
-

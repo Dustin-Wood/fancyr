@@ -7,6 +7,7 @@
 #' @param rMat Correlation matrix (with appropriate reliabilities on diagonal)
 #'  The correlation matrix should have a unique name for each variable, and these
 #'  variable names should be a single word or string (no spaces).  Can check with \code{colnames(rMat)}
+#' @param rotate Rotation method passed to \code{psych::principal()}. Defaults to \code{"none"}.
 #' @details The correlation matrix should have correct reliability values on the diagonals (ideally,
 #' the value will be estimates of the retest values over the same measurement interval as typical for
 #' inter-item correlations within the matrix; see Wood, Lowman, Armstrong, & Harms, 2022).
@@ -28,7 +29,7 @@
 nFK <- function(rMat, rotate = "none") {
 
 #Step 1: conduct principal components analysis (PCA)
-rfactors<-psych::principal(rMat,covar=T, nfactors = ncol(rMat), rotate = rotate)
+rfactors<-psych::principal(rMat,covar=TRUE, nfactors = ncol(rMat), rotate = rotate)
   floadings<-unclass(rfactors$loadings) #extract factor loadings
 
 #Step 2: bind factor loadings to original correlation matrix
@@ -44,7 +45,7 @@ diag(bigmat)<-1
 
 #3.2 - smooth into a positive-definite matrix using Higham's (2002) adjustment
   #(*I found this needed to be done in order to have lavaan run on example datasets involving perfect correlations)
-bigmat<-data.matrix(Matrix::nearPD(bigmat, corr=T, keepDiag = TRUE)$mat)
+bigmat<-data.matrix(Matrix::nearPD(bigmat, corr=TRUE, keepDiag = TRUE)$mat)
 
 #3.3 - Predict the factor as well as possible from set K
   #Creation of model for lavaan to predict all factors from all variables in K as predictors

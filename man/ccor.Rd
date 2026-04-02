@@ -4,7 +4,7 @@
 \alias{ccor}
 \title{Scale-Center (or Cohen) Correlations, rc}
 \usage{
-ccor(x, mid = 3) #e.g., midpoint of standard 1-5 Likert scale is 3
+ccor(x, mid = 0, margin = 2)
 }
 \arguments{
 \item{x}{matrix to be used for correlations}

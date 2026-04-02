@@ -18,19 +18,14 @@
 #' order, but rated at different times.  For instance, \code{x1} and \code{x2} may be the first
 #' and second administrations of the items in some personality inventory a year
 #' apart (or: a month, a day, etc).
-#' @usage
-#' avgLagR(x1, x2)
-#' phat.t(x1, x2, posdef = "Higham")
 #' @param x1 first matrix to be used to estimate correlations
 #' @param x2 second matrix to be used (all variables should be the same as x1, and in the same order!!)
 #' @param posdef adjust correlations to make the matrix positive definite? ("Bock", "Higham", and default = FALSE)
 #'
 #' @export
 
-avgLagR <- function(x1, x2, posdef = F) {
-  library(psych) #this function utilizes two functions from 'psych' package
-
-  r_x1x2 <- corr.test(x1, x2, use="complete.obs", method="pearson", ci=F)
+avgLagR <- function(x1, x2, posdef = FALSE) {
+  r_x1x2 <- psych::corr.test(x1, x2, use="complete.obs", method="pearson", ci=FALSE)
   r_xy_d <- (r_x1x2$r+t(r_x1x2$r))/2
 
   #variable names will be taken from x1
@@ -41,8 +36,7 @@ avgLagR <- function(x1, x2, posdef = F) {
   #into a positive definite matrix
   if (posdef == "Higham") {
     #smooth into a positive-definite matrix using Higham's (2002) adjustment
-    library(Matrix)
-    posDMat<-nearPD(r_xy_d, corr=FALSE, keepDiag = TRUE)
+    posDMat<-Matrix::nearPD(r_xy_d, corr=FALSE, keepDiag = TRUE)
     r_xy_d<-data.matrix(posDMat$mat)
   }
 
@@ -50,7 +44,7 @@ avgLagR <- function(x1, x2, posdef = F) {
     #smooth into positive-definite matrix using Bock, Gibbons and Muraki (1988) and Wothke (1993) adjustment
     #note: this particular adjustment doesn't seem to play well with the unadjusted r_xy_d matrix (i.e., where diagonals do not equal 1)
     #it seems it is not designed to handle covariance rather than correlation matrices.
-    r_xy_d<-cor.smooth(r_xy_d)
+    r_xy_d<-psych::cor.smooth(r_xy_d)
   }
 
   return(r_xy_d)

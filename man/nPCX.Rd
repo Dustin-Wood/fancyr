@@ -8,6 +8,8 @@ nPCX(rMat, rotate = "none")
 }
 \arguments{
 \item{rMat}{Correlation matrix}
+
+\item{rotate}{Rotation method passed to \code{psych::principal()}. Defaults to \code{"none"}.}
 }
 \value{
 (describe)
@@ -28,5 +30,8 @@ There is also some code that is a work in progress to try to do this through 'se
 it is commented out as it has problems at the moment.
 }
 \examples{
-subdata <- subset(datafile, prMaxSD > .05)
+\donttest{
+rmat <- cor(attitude)
+nPCX(rmat)
+}
 }

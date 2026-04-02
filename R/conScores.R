@@ -10,14 +10,16 @@
 #' @param i2c items' coded indicativeness of the construct, on a [-1,1] metric (items-to-construct)
 #' @return Participant estimated construct scores, on [-1,1] range
 #' @examples
-#' # Can create the i2c variable by combining [-1,1] column indicating which items are reverse-scored with a column indicating scale the item is to be scored with:
-#' dir<-c(1,1,1,1,-1,1,1,1,1,1,-1,1,1,-1,1,-1,-1,-1,-1,-1,1,1,-1,1)
-#' scale<-c("scale1","scale2","scale3","scale2","scale4","scale3","scale2","scale1","scale1","scale3","scale4","scale3","scale1","scale1","scale3","scale1","scale4","scale1","scale3","scale2","scale3","scale2","scale1","scale3")
-#' scale2<-dummy.code(scale)
+#' # Build an items-to-constructs (i2c) matrix from direction and scale membership
+#' dir <- c(1, 1, -1, 1, -1, 1)
+#' scale <- c("A", "B", "A", "B", "A", "B")
+#' scale2 <- psych::dummy.code(scale)
 #' i2c <- sweep(scale2, 1, dir, "*")
-
 #'
-#'
+#' # Person-by-item scores on [-1, 1] scale (e.g., from cx())
+#' set.seed(42)
+#' p2i <- matrix(runif(18, -1, 1), nrow = 3, ncol = 6)
+#' conScores(p2i, i2c)
 #'
 #' @export
 
@@ -28,7 +30,7 @@ conScores <- function(p2i, i2c) {
   i2c <- as.matrix(i2c)
 
   #let people know if they're not using cx scores
-  if (max(abs(p2i),na.rm = T) > 1) {
+  if (max(abs(p2i), na.rm = TRUE) > 1) {
     warning("You are not using cx scores, which makes scores less interpretable.  Run cx function from package fancyr to place scores on [-1,1] scale before proceeding")
   }
 
@@ -37,14 +39,13 @@ conScores <- function(p2i, i2c) {
 
   #calculate construct scores
   p2i[is.na(p2i)] <- 0 #replace NAs with 0 to allow calculation to continue
-  p2c.Sum<-p2i%*%i2c #these is the sum of cross-products.  Scale can differ wildly if there are missing values
+  p2c.Sum <- p2i%*%i2c #these is the sum of cross-products.  Scale can differ wildly if there are missing values
 
   #indicate effectiveN separately for each person and construct
-  nC<-p2iObs%*%abs(i2c)
+  nC <- p2iObs%*%abs(i2c)
 
   #this should return construct scores to a [-1,1] scale
-  p2c <- round(p2c.Sum*(1/nC),3)
+  p2c <- round(p2c.Sum*(1/nC), 3)
 
   return(p2c)
 }
-

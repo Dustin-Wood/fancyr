@@ -24,12 +24,15 @@ prior to running this function; this can be
 done through the \code{cx} function within the \code{fancyr} package
 }
 \examples{
-# Can create the i2c variable by combining [-1,1] column indicating which items are reverse-scored with a column indicating scale the item is to be scored with:
-dir<-c(1,1,1,1,-1,1,1,1,1,1,-1,1,1,-1,1,-1,-1,-1,-1,-1,1,1,-1,1)
-scale<-c("scale1","scale2","scale3","scale2","scale4","scale3","scale2","scale1","scale1","scale3","scale4","scale3","scale1","scale1","scale3","scale1","scale4","scale1","scale3","scale2","scale3","scale2","scale1","scale3")
-scale2<-dummy.code(scale)
+# Build an items-to-constructs (i2c) matrix from direction and scale membership
+dir <- c(1, 1, -1, 1, -1, 1)
+scale <- c("A", "B", "A", "B", "A", "B")
+scale2 <- psych::dummy.code(scale)
 i2c <- sweep(scale2, 1, dir, "*")
 
-
+# Person-by-item scores on [-1, 1] scale (e.g., from cx())
+set.seed(42)
+p2i <- matrix(runif(18, -1, 1), nrow = 3, ncol = 6)
+conScores(p2i, i2c)
 
 }

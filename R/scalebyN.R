@@ -14,7 +14,7 @@
 #'
 #' @export
 
-scalebyN <- function(x, center = T, scale = T) {
+scalebyN <- function(x, center = TRUE, scale = TRUE) {
   zx <- scale(x, center = center, scale = scale)
   n<-colSums(!is.na(x))
   zxN<-t((sqrt(n)*t(zx))/sqrt(n-1))

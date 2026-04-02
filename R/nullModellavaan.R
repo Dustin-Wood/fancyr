@@ -5,8 +5,6 @@
 #' a set, without then going and trying to say anything about how level1 or level2
 #' variance is predicted by anything.
 #' @param varset the set of variables you want to include in the null model
-#' @usage
-#' nullModellavaan(pmRatingData[3:ncol(pmRatingData)]) #if first two variables are 'p' and 'm' and all the remaining variables are variable ratings
 #' @return the text you need to put into \code{model} for \code{lavaan::sem(model, ...)}
 #'
 #' @export
