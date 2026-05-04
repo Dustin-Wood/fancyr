@@ -7,33 +7,51 @@
 nFK(rMat, rotate = "none")
 }
 \arguments{
-\item{rMat}{Correlation matrix (with appropriate reliabilities on diagonal)
-The correlation matrix should have a unique name for each variable, and these
-variable names should be a single word or string (no spaces).  Can check with \code{colnames(rMat)}}
+\item{rMat}{Correlation/covariance matrix with reliability estimates on the
+diagonal (ideally retest correlations over the same measurement interval as
+the inter-item correlations; see Wood, Lowman, Armstrong, & Harms, 2022).
+Diagonals can range from 0 to 1; off-diagonals are observed inter-item
+correlations. Variable names must be unique and contain no spaces.}
 
-\item{rotate}{Rotation method passed to \code{psych::principal()}. Defaults to \code{"none"}.}
+\item{rotate}{Rotation method passed to \code{psych::principal()}. Defaults to
+\code{"none"}.}
 }
 \value{
-returns:
-(1) the PCA loadings,
-(2) the R^2 for each separate factor, and
-(3) the nFK for the entire item set (sum of R^2)
+A named list with:
+\describe{
+  \item{\code{PCAloadings}}{Matrix of PCA factor loadings (items x components).}
+  \item{\code{r2}}{Named numeric vector of \eqn{R^2} values, one per principal component.}
+  \item{\code{weights}}{Eigenvalue weights \eqn{\lambda_k / \lambda_{\max}}.}
+  \item{\code{contributions}}{Per-PC contribution to nFK (\eqn{R^2_k \cdot \lambda_k / \lambda_{\max}}).}
+  \item{\code{nFK}}{Scalar — the effective number of orthogonal factors.}
+}
 }
 \description{
-For a specified set of variables, estimate the 'effective number of orthogonal factors' measured.
-
-Note that 'measured' is intended to mean that a factor is only measured if it has an
-R^2 value of 1.00.  So statistic provides the sum of R2 for orthogonal dimensions, via PCA.
+For a specified set of variables, estimate the 'effective number of orthogonal
+factors' measured. The statistic decreases monotonically as variables become
+more redundant: a set of \eqn{p} variables that are perfectly reliable
+(diagonal = 1) and uncorrelated returns \code{nFK = p}; a set that is perfectly
+reliable and perfectly intercorrelated returns \code{nFK = 1}.
 }
 \details{
-The correlation matrix should have correct reliability values on the diagonals (ideally,
-the value will be estimates of the retest values over the same measurement interval as typical for
-inter-item correlations within the matrix; see Wood, Lowman, Armstrong, & Harms, 2022).
-If values of 1.0 are used on the diagonal rather than correct reliability estimates,
-then the resulting nFK estimate will be inflated - often substantially. However, it may
-still be useful to estimate nFK in this case to provide an 'upper-bound' estimate
-of nFK.
+nFK is computed in closed form as
+\deqn{\mathrm{nFK} = \sum_k R^2_k \cdot \frac{\lambda_k}{\lambda_{\max}},}
+where \eqn{\lambda_k} is the \eqn{k}-th eigenvalue of \code{rMat} and
+\eqn{R^2_k = \mathbf{L}_{\cdot k}' \mathbf{C}_{\mathrm{obs}}^{-1} \mathbf{L}_{\cdot k}}
+is the OLS \eqn{R^2} for predicting the (standardized) \eqn{k}-th principal
+component from the observed items. \eqn{\mathbf{L}} are the PCA loadings of
+\code{rMat} (with \code{covar = TRUE}) and \eqn{\mathbf{C}_{\mathrm{obs}}} is
+\code{rMat} with the diagonal set to 1.
 
-There is also some code that is a work in progress to try to do this through 'setCor', although
-it is commented out as it has problems at the moment.
+The weighting by \eqn{\lambda_k / \lambda_{\max}} prevents PCs that capture
+little of \code{rMat}'s variance (e.g., near-zero noise eigenvectors when
+items are highly correlated) from inflating the count, which is why a
+perfectly intercorrelated set yields nFK = 1 even when items are perfectly
+reliable. When the diagonal contains reliability estimates rather than 1.0,
+the \eqn{R^2_k} terms also discount each factor by how well the observed
+items recover it.
+
+\code{C_obs} can be rank-deficient (e.g., when off-diagonals are 1); this
+function uses an SVD-based pseudoinverse so those cases evaluate without
+error.
 }

@@ -30,30 +30,40 @@ correlations.}
 See \code{\link[stats]{p.adjust}} for all options.}
 
 \item{include_controls}{Logical. If \code{TRUE}, control variables are included as rows
-in the output alongside the predictors. Default is \code{FALSE}.}
+in the summary tables alongside the predictors. Default is \code{FALSE}.}
 }
 \value{
-A data frame with one row per predictor (and optionally per control variable).
-Columns are \code{var} (variable name) followed by \code{r.<dv>}, \code{p.<dv>},
-and \code{n.<dv>} for each outcome in \code{dv}.
+A named list with two elements:
+\describe{
+  \item{\code{summary}}{A named list of data frames, one per outcome in \code{dv}.
+  Each data frame has columns \code{var}, \code{r}, \code{p}, and \code{n} for
+  each predictor (and optionally each control variable).}
+  \item{\code{cors}}{The full correlation object returned by \code{\link[psych]{corr.test}}
+  (zero-order case) or \code{\link[psych]{corr.p}} (partial case), containing the complete
+  r, p, t, and n matrices across all variables.}
+}
 }
 \description{
 Computes zero-order or partial correlations (controlling for a set of covariates)
-between a set of predictor variables and one or more outcome variables. Returns a tidy
-data frame with r, p, and n for each predictor-outcome pair.
+between a set of predictor variables and one or more outcome variables.
 }
 \examples{
 \dontrun{
 # Zero-order correlations of two predictors with one outcome
-partialR(data = mydata, predictors = c("x1", "x2"), dv = "y")
+out <- partialR(data = mydata, predictors = c("x1", "x2"), dv = "y")
+out$summary$y
 
 # Partial correlations controlling for age and sex
-partialR(data = mydata, predictors = c("x1", "x2"), dv = "y",
-         controls = c("age", "sex"))
+out <- partialR(data = mydata, predictors = c("x1", "x2"), dv = "y",
+                controls = c("age", "sex"))
+out$summary$y
+out$cors$r  # full partial r matrix
 
 # Multiple outcomes, Holm-adjusted p-values
-partialR(data = mydata, predictors = c("x1", "x2", "x3"),
-         dv = c("y1", "y2"), controls = c("age"), adjust = "holm")
+out <- partialR(data = mydata, predictors = c("x1", "x2", "x3"),
+                dv = c("y1", "y2"), controls = c("age"), adjust = "holm")
+out$summary$y1
+out$summary$y2
 }
 }
 \seealso{
