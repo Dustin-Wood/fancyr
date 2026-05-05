@@ -1,0 +1,261 @@
+---
+title: "nFK Reference Cases"
+output:
+  html_document:
+    theme: cosmo
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+suppressMessages({ library(devtools); load_all(quiet = TRUE) })
+library(knitr)
+library(ggplot2)
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+```
+
+```{css, echo=FALSE}
+table.nfk-ref { border-collapse: collapse; width: 100%; margin-bottom: 1.5em; }
+table.nfk-ref td { border: 1px solid #ddd; padding: 10px 14px; vertical-align: top; }
+table.nfk-ref th { border: 1px solid #ddd; padding: 8px 14px; background: #f5f5f5; text-align: left; }
+table.nfk-ref pre { margin: 0; font-size: 0.85em; line-height: 1.25; }
+.nfk-value { font-size: 1.4em; font-weight: 600; color: #2a4d8f; }
+.nfk-desc { margin-top: 0.6em; color: #333; }
+.nfk-ex { font-weight: 600; color: #555; margin-right: 0.25em; }
+```
+
+Each row shows a 6&times;6 input matrix (diagonal = reliability, off-diagonal = inter-item correlation) alongside the resulting `nFK`. Verbal commentary lives in the right cell.
+
+```{r references}
+varnames <- c("A", "B", "C", "D", "E", "F")
+
+mk <- function(off, dg = 1) {
+  m <- matrix(off, 6, 6); diag(m) <- dg; m
+}
+
+ref <- list(
+  list(
+    ex          = "#1",
+    diag        = 1.0, r = 0.0,
+    description = "Identity matrix. Six perfectly reliable, uncorrelated items &mdash; six 1-item composites each at reliability 1. nFK = p = 6 is the upper bound.",
+    m           = diag(6)
+  ),
+  list(
+    ex          = "#2",
+    diag        = 1.0, r = 1.0,
+    description = "All entries 1. Six perfect copies of one factor; the unit-weighted composite has Spearman-Brown reliability (6&middot;1)/(1+5&middot;1) = 1 for measuring that single factor, so nFK = 1.",
+    m           = matrix(1, 6, 6)
+  ),
+  list(
+    ex          = "#3",
+    diag        = 0.7, r = 0.7,
+    description = "All entries 0.7. One factor measured by 6 items with diag = off-diag = 0.7. Spearman-Brown reliability of the unit composite = (6&middot;0.7)/(1+5&middot;0.7) = 0.933 &mdash; exactly matching nFK.",
+    m           = matrix(0.7, 6, 6)
+  ),
+  list(
+    ex          = "#4",
+    diag        = 0.7, r = 0.0,
+    description = "Six orthogonal items, each measured with reliability 0.7. Each item is its own 1-item factor; nFK = 6 &times; 0.7 = 4.2 is the sum of per-item reliabilities.",
+    m           = mk(0, dg = 0.7)
+  ),
+  list(
+    ex          = "#5",
+    diag        = 1.0, r = 0.2,
+    description = "Six perfectly reliable items at weak inter-correlation (r = 0.2). With diag = 1, every PC is exactly recoverable from items, so nFK = p = 6 regardless of off-diagonal magnitude. Inter-correlation is not a measurement-error discount &mdash; to register it as one, encode reliability or communality &lt; 1 on the diagonal (see #7 for the same off-diagonal structure with diag = 0.9).",
+    m           = mk(0.2)
+  ),
+  list(
+    ex          = "#6",
+    diag        = 1.0, r = 0.7,
+    description = "Same setup as #5 but at r = 0.7. Same principle: with diag = 1 (no measurement error), all six dimensions are exactly recoverable from the items, so nFK = 6 even at strong inter-item correlation. See #8 for the diag = 0.9 counterpart.",
+    m           = mk(0.7)
+  ),
+  list(
+    ex          = "#7",
+    diag        = 0.9, r = 0.2,
+    description = "Same off-diagonal structure as #5 (r = 0.2) but at diag = 0.9 &mdash; items now have 10% measurement error. Unlike #5, this matrix discounts each PC for that error, and inter-correlation now reduces nFK below p. Closed form: R&sup2;<sub>PC1</sub> = (0.9 + 5&middot;0.2)/(1 + 5&middot;0.2) = 0.95; R&sup2;<sub>k&gt;1</sub> = (0.9 &minus; 0.2)/(1 &minus; 0.2) = 0.875 each; sum = 5.325.",
+    m           = mk(0.2, dg = 0.9)
+  ),
+  list(
+    ex          = "#8",
+    diag        = 0.9, r = 0.7,
+    description = "Same off-diagonal structure as #6 (r = 0.7) but at diag = 0.9. Strong inter-correlation paired with imperfect reliability produces a more substantial discount than #7. Closed form: R&sup2;<sub>PC1</sub> = (0.9 + 5&middot;0.7)/(1 + 5&middot;0.7) = 0.978; R&sup2;<sub>k&gt;1</sub> = (0.9 &minus; 0.7)/(1 &minus; 0.7) = 0.667 each; sum = 4.311.",
+    m           = mk(0.7, dg = 0.9)
+  ),
+  list(
+    ex          = "#9",
+    diag        = NA_real_, r = NA_real_,
+    description = "Two orthogonal three-item blocks, perfectly intercorrelated within (r = 1) and uncorrelated across. Per-block Spearman-Brown = (3&middot;1)/(1+2&middot;1) = 1; nFK = 2 &times; 1 = 2.",
+    m           = { x <- matrix(0, 6, 6); x[1:3, 1:3] <- 1; x[4:6, 4:6] <- 1; x }
+  ),
+  list(
+    ex          = "#10",
+    diag        = NA_real_, r = NA_real_,
+    description = "Same block structure as #9 but scaled by 0.7. Per-block Spearman-Brown = (3&middot;0.7)/(1+2&middot;0.7) = 0.875; nFK = 2 &times; 0.875 = 1.75.",
+    m           = { x <- matrix(0, 6, 6); x[1:3, 1:3] <- 0.7; x[4:6, 4:6] <- 0.7; x }
+  ),
+  list(
+    ex          = "#11",
+    diag        = NA_real_, r = NA_real_,
+    description = "Variable A is a perfect compound: A = 0.7&middot;B + 0.3&middot;C + 0.1&middot;D, with B, C, D, E, F mutually uncorrelated unit-variance variables (so &sigma;<sup>2</sup>(A) = 0.7<sup>2</sup> + 0.3<sup>2</sup> + 0.1<sup>2</sup> = 0.59). The correlation matrix is obtained from the covariance via <code>cov2cor()</code>. Rank 5 (A is determined by B, C, D); PC6 has zero loadings and contributes 0, while the other five PCs are perfectly recovered, giving nFK = 5.",
+    m           = {
+      cov_m <- matrix(c(.59, .7, .3, .1, 0, 0,
+                        .7,  1,  0,  0, 0, 0,
+                        .3,  0,  1,  0, 0, 0,
+                        .1,  0,  0,  1, 0, 0,
+                        0,   0,  0,  0, 1, 0,
+                        0,   0,  0,  0, 0, 1),
+                      nrow = 6, byrow = TRUE)
+      cov2cor(cov_m)
+    }
+  )
+)
+
+fmt_matrix <- function(m, vn, digits = 3) {
+  dimnames(m) <- list(vn, vn)
+  paste0(
+    "<pre>",
+    paste(capture.output(print(round(m, digits))), collapse = "\n"),
+    "</pre>"
+  )
+}
+
+fmt_right <- function(nfk_val, ex, description) {
+  nfk_str <- if (is.na(nfk_val)) "ERROR" else sprintf("%.3f", nfk_val)
+  sprintf(
+    "<div><span class='nfk-value'>nFK = %s</span></div><div class='nfk-desc'><span class='nfk-ex'>%s</span> %s</div>",
+    nfk_str, ex, description
+  )
+}
+
+ref_results <- lapply(ref, function(r) {
+  res <- tryCatch(suppressWarnings(nFK(r$m)), error = function(e) NULL)
+  nfk_val <- if (is.null(res)) NA_real_ else res$nFK
+  list(
+    ex          = r$ex,
+    diag        = r$diag,
+    r           = r$r,
+    nFK         = nfk_val,
+    matrix_html = fmt_matrix(r$m, varnames),
+    info_html   = fmt_right(nfk_val, r$ex, r$description)
+  )
+})
+
+# Annotation table for the sweep plot below.
+ref_points <- data.frame(
+  ex   = vapply(ref_results, `[[`, character(1), "ex"),
+  diag = vapply(ref_results, `[[`, numeric(1),   "diag"),
+  r    = vapply(ref_results, `[[`, numeric(1),   "r"),
+  nFK  = vapply(ref_results, `[[`, numeric(1),   "nFK"),
+  stringsAsFactors = FALSE
+)
+
+df <- data.frame(
+  Matrix         = vapply(ref_results, `[[`, character(1), "matrix_html"),
+  `nFK and notes`= vapply(ref_results, `[[`, character(1), "info_html"),
+  check.names    = FALSE,
+  stringsAsFactors = FALSE
+)
+
+kbl <- knitr::kable(df, format = "html", escape = FALSE, table.attr = "class='nfk-ref'")
+htmltools::HTML(as.character(kbl))
+```
+
+## Connection to coefficient alpha and Spearman-Brown reliability
+
+Each per-PC `R²_k` returned by `nFK()` admits a clean psychometric reading:
+
+> `R²_k` is the **maximum reliability** of the optimal linear composite of items measuring the *k*-th principal component &mdash; equivalent to &omega;<sub>max</sub> (Bentler 1968; Lord 1958), the upper bound on reliability achievable by reweighting items.
+
+When items measuring a factor are **tau-equivalent** (uniform loadings, uniform within-cluster correlation), &omega;<sub>max</sub> collapses to Cronbach's &alpha;, and for symmetric scales further to Spearman-Brown. Several reference cases above are exactly tau-equivalent within their cluster, and `nFK` lands precisely on the canonical reliability formula:
+
+```{r verify_alpha}
+verify <- data.frame(
+  case      = c("#3", "#4", "#9", "#10"),
+  structure = c("1 factor, 6 items, all r = 0.7, diag = 0.7",
+                "6 orthogonal 1-item factors, each at reliability 0.7",
+                "2 blocks of 3 items, within-block r = 1, diag = 1",
+                "2 blocks of 3 items, within-block r = 0.7, diag = 0.7"),
+  expected  = c("Spearman-Brown(6, 0.7) = (6&middot;0.7)/(1+5&middot;0.7) = 0.933",
+                "6 &times; 0.7 = 4.200",
+                "2 &times; Spearman-Brown(3, 1) = 2 &times; 1 = 2.000",
+                "2 &times; Spearman-Brown(3, 0.7) = 2 &times; 0.875 = 1.750"),
+  computed  = c(
+    sprintf("%.3f", nFK(matrix(0.7, 6, 6))$nFK),
+    sprintf("%.3f", nFK({ x <- matrix(0, 6, 6); diag(x) <- 0.7; x })$nFK),
+    sprintf("%.3f", nFK({ x <- matrix(0, 6, 6); x[1:3,1:3] <- 1; x[4:6,4:6] <- 1; x })$nFK),
+    sprintf("%.3f", nFK({ x <- matrix(0, 6, 6); x[1:3,1:3] <- 0.7; x[4:6,4:6] <- 0.7; x })$nFK)
+  ),
+  check.names = FALSE,
+  stringsAsFactors = FALSE
+)
+names(verify) <- c("Case", "Structure", "Expected (closed form)", "nFK")
+knitr::kable(verify, format = "html", escape = FALSE,
+             caption = "Cases where nFK exactly matches the canonical reliability formula.")
+```
+
+### Why diag = 1 cases give nFK = *p*
+
+Cases #5 and #6 (r = 0.2 and r = 0.7, both with diag = 1) both yield `nFK = 6`, regardless of off-diagonal magnitude. Under the &omega;<sub>max</sub> reading, this is the *correct* answer: with diag = 1 every item is its own 1-item perfectly-reliable composite, so the matrix encodes "I have six perfectly-measured dimensions" &mdash; even if those dimensions correlate.
+
+To register inter-item correlation as a *measurement-information* loss, the reduction must live on the diagonal. That is the role of nFK's diagonal input: it carries reliability (or communality), and the off-diagonals describe the structure of true-score associations among items. Setting r = 0.7 with diag = 1 (case #6) asks nFK to read "I have six perfectly-measured items that happen to correlate"; setting diag &lt; 1 (as in #3, #4, #7, #8, #10) shifts the matrix toward "each item recovers less than full true-score variance," and the formula responds accordingly. The contrast is clearest between #5 vs #7 and #6 vs #8: identical off-diagonal patterns at diag = 1 give nFK = 6, while at diag = 0.9 the same matrices give 5.325 and 4.311 respectively. Cases #5 and #6 thus serve as demonstrations of the principle &mdash; not failures of the formula.
+
+## Uniform-correlation sweeps
+
+For a *p* &times; *p* matrix with constant diagonal *d* and constant off-diagonal *r*, the curves below trace nFK as *r* varies. One curve per reliability level *d* &isin; {0.1, 0.2, &hellip;, 1.0}; for each curve, *r* runs from 0 to *d* (beyond *r* = *d* the matrix is no longer positive semi-definite). Each panel uses its own y-axis so the curve shape is visible at every scale. Reference cases from the table above are annotated on the *p* = 6 panel.
+
+```{r sweep, fig.width=9, fig.height=6.5}
+sweep_uniform <- function(p, dg, rs) {
+  out <- numeric(length(rs))
+  for (i in seq_along(rs)) {
+    m <- matrix(rs[i], p, p); diag(m) <- dg
+    res <- tryCatch(suppressWarnings(nFK(m)), error = function(e) NULL)
+    out[i] <- if (is.null(res)) NA_real_ else res$nFK
+  }
+  out
+}
+
+diags  <- seq(0.1, 1.0, by = 0.1)
+ps     <- c(2, 6, 60, 120)
+r_step <- 0.01
+
+df_sweep <- do.call(rbind, lapply(ps, function(p) {
+  do.call(rbind, lapply(diags, function(d) {
+    rs <- seq(0, d, by = r_step)
+    data.frame(p = p, diag = d, r = rs, nFK = sweep_uniform(p, d, rs))
+  }))
+}))
+df_sweep$p_lab <- factor(paste0("p = ", df_sweep$p),
+                         levels = paste0("p = ", ps))
+
+ann <- transform(subset(ref_points, !is.na(r) & !is.na(diag)),
+                 p     = 6L,
+                 p_lab = factor("p = 6", levels = paste0("p = ", ps)))
+
+ggplot(df_sweep, aes(x = r, y = nFK, color = diag, group = diag)) +
+  geom_line(alpha = 0.85, linewidth = 0.6) +
+  geom_point(data = ann, size = 2.6, shape = 21, fill = "white", stroke = 1) +
+  geom_label(data = ann, aes(label = ex),
+             vjust = -0.4, hjust = -0.1, size = 3.3,
+             label.size = 0, label.padding = unit(0.1, "lines"),
+             fill = alpha("white", 0.7), show.legend = FALSE) +
+  facet_wrap(~ p_lab, scales = "free_y") +
+  scale_color_viridis_c(
+    name      = "diag\n(reliability)",
+    limits    = c(0.1, 1.0),
+    breaks    = diags,
+    direction = -1,
+    option    = "viridis"
+  ) +
+  scale_x_continuous(breaks = seq(0, 1, by = 0.2),
+                     expand = expansion(mult = c(0.02, 0.08))) +
+  scale_y_continuous(expand = expansion(mult = c(0.04, 0.10))) +
+  expand_limits(y = 0) +
+  labs(
+    x     = "Off-diagonal correlation (r)",
+    y     = "nFK",
+    title = "nFK across uniform correlation matrices, by matrix size and reliability"
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(panel.grid.minor = element_blank(),
+        strip.text       = element_text(face = "bold"))
+```

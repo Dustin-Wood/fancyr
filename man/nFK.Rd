@@ -7,51 +7,87 @@
 nFK(rMat, rotate = "none")
 }
 \arguments{
-\item{rMat}{Correlation/covariance matrix with reliability estimates on the
-diagonal (ideally retest correlations over the same measurement interval as
-the inter-item correlations; see Wood, Lowman, Armstrong, & Harms, 2022).
-Diagonals can range from 0 to 1; off-diagonals are observed inter-item
-correlations. Variable names must be unique and contain no spaces.}
+\item{rMat}{Correlation matrix with reliability or communality estimates on
+the diagonal (range 0 to 1). Off-diagonals are observed inter-item
+correlations. Reliability on the diagonal — ideally retest correlations
+over the same measurement interval as the inter-item correlations
+(Wood, Lowman, Armstrong, & Harms, 2022) — is what makes the statistic
+reliability-aware rather than just counting components. Setting the
+diagonal to 1.0 returns \code{nFK = p} regardless of off-diagonals (every
+item is its own perfectly-measured composite), which is correct under the
+\eqn{\omega_{\max}} reading but typically not the answer the user wants.
+Variable names must be unique and contain no spaces.}
 
-\item{rotate}{Rotation method passed to \code{psych::principal()}. Defaults to
-\code{"none"}.}
+\item{rotate}{Orthogonal rotation applied to the principal-component
+loadings before the joint matrix is built. One of \code{"none"} (default)
+or \code{"varimax"}. Total \code{nFK} is invariant under orthogonal
+rotation, but per-component reliabilities in \code{r2} redistribute and
+may be of independent interest. Use \code{rotate = "varimax"} when the
+goal is the reliability of each rotated factor (e.g., Big-Five solutions)
+rather than total dimensionality.}
 }
 \value{
 A named list with:
 \describe{
-  \item{\code{PCAloadings}}{Matrix of PCA factor loadings (items x components).}
-  \item{\code{r2}}{Named numeric vector of \eqn{R^2} values, one per principal component.}
-  \item{\code{weights}}{Eigenvalue weights \eqn{\lambda_k / \lambda_{\max}}.}
-  \item{\code{contributions}}{Per-PC contribution to nFK (\eqn{R^2_k \cdot \lambda_k / \lambda_{\max}}).}
-  \item{\code{nFK}}{Scalar — the effective number of orthogonal factors.}
+  \item{\code{PCAloadings}}{Unsmoothed PCA loadings (items x components),
+    after rotation if requested.}
+  \item{\code{r2}}{Named numeric vector of \eqn{\omega_{\max,k}} — the
+    maximum reliability of the optimal composite for each component.}
+  \item{\code{nFK}}{Scalar — total effective number of orthogonal factors.}
 }
 }
 \description{
-For a specified set of variables, estimate the 'effective number of orthogonal
-factors' measured. The statistic decreases monotonically as variables become
-more redundant: a set of \eqn{p} variables that are perfectly reliable
-(diagonal = 1) and uncorrelated returns \code{nFK = p}; a set that is perfectly
-reliable and perfectly intercorrelated returns \code{nFK = 1}.
+Estimate the effective number of orthogonal factors measured by a set of
+items, weighted by how reliably each factor is recovered. Conceptually,
+\deqn{\mathrm{nFK} = \sum_k \omega_{\max,k},}
+where \eqn{\omega_{\max,k}} (Bentler, 1968; Lord, 1958) is the maximum
+reliability achievable by the optimal linear composite of items measuring
+the \eqn{k}-th principal component. When items measuring a factor are
+tau-equivalent (uniform loadings, uniform within-cluster correlation),
+\eqn{\omega_{\max}} collapses to Cronbach's \eqn{\alpha}, and for symmetric
+scales further to Spearman-Brown.
+
+Use \code{nFK} as a reliability-aware dimensionality summary — an
+alternative to procedures that ignore measurement error (Kaiser rule,
+parallel analysis on the unaltered correlation matrix).
 }
 \details{
-nFK is computed in closed form as
-\deqn{\mathrm{nFK} = \sum_k R^2_k \cdot \frac{\lambda_k}{\lambda_{\max}},}
-where \eqn{\lambda_k} is the \eqn{k}-th eigenvalue of \code{rMat} and
-\eqn{R^2_k = \mathbf{L}_{\cdot k}' \mathbf{C}_{\mathrm{obs}}^{-1} \mathbf{L}_{\cdot k}}
-is the OLS \eqn{R^2} for predicting the (standardized) \eqn{k}-th principal
-component from the observed items. \eqn{\mathbf{L}} are the PCA loadings of
-\code{rMat} (with \code{covar = TRUE}) and \eqn{\mathbf{C}_{\mathrm{obs}}} is
-\code{rMat} with the diagonal set to 1.
+\strong{Special cases.}
+\itemize{
+  \item \emph{\eqn{p} orthogonal items, each at reliability \eqn{\rho}}:
+    \eqn{\mathrm{nFK} = p \rho}.
+  \item \emph{One factor measured by \eqn{k} tau-equivalent items at
+    within-cluster correlation \eqn{r}, diagonal \eqn{= r}}:
+    \eqn{\mathrm{nFK} = \mathrm{SB}(k, r) = k r / (1 + (k-1) r)}.
+  \item \emph{Rank-deficient matrices}: components with zero loadings
+    contribute zero, so the matrix rank is the upper bound on \code{nFK}.
+}
 
-The weighting by \eqn{\lambda_k / \lambda_{\max}} prevents PCs that capture
-little of \code{rMat}'s variance (e.g., near-zero noise eigenvectors when
-items are highly correlated) from inflating the count, which is why a
-perfectly intercorrelated set yields nFK = 1 even when items are perfectly
-reliable. When the diagonal contains reliability estimates rather than 1.0,
-the \eqn{R^2_k} terms also discount each factor by how well the observed
-items recover it.
+\strong{Method.} Eigendecompose \code{rMat} to get loadings \eqn{\mathbf{L}
+= \mathbf{V} \mathbf{D}^{1/2}}; optionally rotate. Form the \eqn{2p \times
+2p} joint matrix
+\deqn{\mathbf{B} = \begin{bmatrix} \mathbf{R} & \mathbf{L} \\
+\mathbf{L}' & \mathbf{0} \end{bmatrix},}
+fix \eqn{\mathrm{diag}(\mathbf{B}) = 1}, and smooth to the nearest
+correlation matrix via \code{Matrix::nearPD()} (Higham, 2002). The joint
+matrix is rank-deficient by construction (components are exact linear
+combinations of items), and this smoothing is what drives \eqn{R^2_k} below
+1 in collinear cases. From the smoothed item block \eqn{\mathbf{R}_{xx}}
+and item-component block \eqn{\mathbf{L}^*}, compute the OLS \eqn{R^2_k =
+\mathbf{L}^{*\prime}_{\cdot k} \mathbf{R}_{xx}^{-1} \mathbf{L}^*_{\cdot k}};
+each \eqn{R^2_k} equals \eqn{\omega_{\max,k}} for the \eqn{k}-th component,
+and \code{nFK} is their sum.
+}
+\references{
+Bentler, P. M. (1968). Alpha-maximized factor analysis (alphamax): Its
+relation to alpha and canonical factor analysis. \emph{Psychometrika},
+\emph{33}(3), 335-345.
 
-\code{C_obs} can be rank-deficient (e.g., when off-diagonals are 1); this
-function uses an SVD-based pseudoinverse so those cases evaluate without
-error.
+Higham, N. J. (2002). Computing the nearest correlation matrix - a problem
+from finance. \emph{IMA Journal of Numerical Analysis}, \emph{22}(3),
+329-343.
+
+Lord, F. M. (1958). Some relations between Guttman's principal components
+of scale analysis and other psychometric theory. \emph{Psychometrika},
+\emph{23}(4), 291-296.
 }

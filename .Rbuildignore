@@ -3,3 +3,8 @@
 ^\.claude$
 ^CLAUDE\.md$
 ^\.positai$
+^dev$
+^test_nFK\.R$
+^test_nFK\.Rmd$
+^test_nFK\.html$
+^test_nFK_files$
