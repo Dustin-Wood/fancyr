@@ -14,16 +14,89 @@ knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
 ```
 
 ```{css, echo=FALSE}
-table.nfk-ref { border-collapse: collapse; width: 100%; margin-bottom: 1.5em; }
-table.nfk-ref td { border: 1px solid #ddd; padding: 10px 14px; vertical-align: top; }
-table.nfk-ref th { border: 1px solid #ddd; padding: 8px 14px; background: #f5f5f5; text-align: left; }
-table.nfk-ref pre { margin: 0; font-size: 0.85em; line-height: 1.25; }
-.nfk-value { font-size: 1.4em; font-weight: 600; color: #2a4d8f; }
-.nfk-desc { margin-top: 0.6em; color: #333; }
+table.nfk-ref { border-collapse: collapse; width: 100%; margin-bottom: 1.5em; font-size: 0.95em; }
+table.nfk-ref td { border: 1px solid #ddd; padding: 9px 12px; vertical-align: top; }
+table.nfk-ref th { border: 1px solid #ddd; padding: 7px 12px; background: #f5f5f5; text-align: left; }
+table.nfk-ref pre { margin: 0; font-size: 0.82em; line-height: 1.22; }
+table.nfk-ref td:nth-child(n+3),
+table.nfk-ref th:nth-child(n+3) {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  padding-left: 8px;
+  padding-right: 10px;
+}
+table.nfk-ref td:nth-child(3) { font-weight: 600; color: #2a4d8f; }
+table.nfk-ref th:nth-child(3) { color: #2a4d8f; }
+.nfk-desc { color: #333; }
 .nfk-ex { font-weight: 600; color: #555; margin-right: 0.25em; }
 ```
 
-Each row shows a 6&times;6 input matrix (diagonal = reliability, off-diagonal = inter-item correlation) alongside the resulting `nFK`. Verbal commentary lives in the right cell.
+`nFK` is the sum of per-component **&omega;<sub>max</sub>** values (Bentler 1968; Lord 1958): for each principal component of the input matrix, &omega;<sub>max</sub> is the maximum reliability achievable by the optimal linear composite of items measuring that component. Reading the totals below, each `nFK` value is "how many factors' worth of reliable measurement the item set provides," with each factor weighted by how well items recover it.
+
+## How nFK is computed
+
+Let $R$ be a $p \times p$ input matrix with reliability or communality on the diagonal and inter-item correlations off-diagonal. The construction proceeds in five steps.
+
+**1. Eigendecomposition and loadings.** Eigendecompose $R = V \Lambda V'$ with $\Lambda = \mathrm{diag}(\lambda_1, \ldots, \lambda_p)$, and form the loading matrix
+
+$$L \;=\; V \,\mathrm{diag}\!\bigl(\sqrt{\lambda_1^{+}}, \ldots, \sqrt{\lambda_p^{+}}\bigr), \qquad \lambda_k^{+} = \max(\lambda_k, 0).$$
+
+Column $L_{\cdot k}$ is the loading of items on the $k$-th principal component. (When `rotate = "varimax"`, an orthogonal rotation is applied to $L$ at this point. Total nFK is invariant under orthogonal rotation; the per-component values redistribute.)
+
+**2. Joint item+component matrix.** Stack items and components into a $2p \times 2p$ block matrix and force the full diagonal to 1:
+
+$$B \;=\; \begin{bmatrix} R & L \\ L' & \mathbf{0} \end{bmatrix}, \qquad \mathrm{diag}(B) \,:=\, 1.$$
+
+The diagonal swap standardizes items (top-left block) and components (bottom-right block) to unit variance; the reliability information that previously lived on the diagonal of $R$ is preserved in $L$, since the eigenvalues of $R$ shrink with the diagonal.
+
+**3. Smooth to the nearest correlation matrix.** $B$ is rank-deficient by construction (components are exact linear combinations of items), so apply Higham's (2002) algorithm to project to the nearest valid correlation matrix:
+
+$$\tilde{B} \;=\; \arg\!\min_{X \,\succeq\, 0,\;\mathrm{diag}(X)\,=\,1} \;\|X - B\|_{F}.$$
+
+For well-behaved inputs the perturbation is negligible; the smoothing matters mainly when $R$ is rank-deficient or pseudo-non-PSD (e.g., reliability lower than off-diagonal correlation), where it is what guarantees $\tilde{R}_{xx}$ is invertible.
+
+**4. Per-component squared multiple correlation.** Partition $\tilde{B}$ back into its top-left item block $\tilde{R}_{xx}$ and top-right item-component block $\tilde{L}$, then for each component $k$,
+
+$$R^{2}_{k} \;=\; \tilde{L}_{\cdot k}' \, \tilde{R}_{xx}^{-1} \, \tilde{L}_{\cdot k}.$$
+
+This is the squared multiple correlation between items and component $k$, which equals $\omega_{\max, k}$ (Bentler 1968; Lord 1958): the maximum reliability achievable by the optimal linear composite of items measuring that component.
+
+**5. Sum.**
+
+$$\mathrm{nFK} \;=\; \sum_{k=1}^{p} R^{2}_{k} \;=\; \sum_{k=1}^{p} \omega_{\max, k}.$$
+
+**Reading the statistic.** Each $R^{2}_{k} \in [0, 1]$ is the reliability of the best item-weighted composite for that dimension; $\mathrm{nFK}$ is "how many factors' worth of reliable measurement" the item set provides. When items measuring a factor are tau-equivalent (uniform loadings, uniform within-cluster correlation), $\omega_{\max}$ collapses to Cronbach's $\alpha$, and for symmetric scales further to Spearman-Brown. When $R$ is rank-deficient, components with zero loadings contribute zero, so $\mathrm{rank}(R)$ is an upper bound on $\mathrm{nFK}$. When $\mathrm{diag}(R) = 1$ throughout (no measurement error encoded), every component is exactly recoverable from items and $\mathrm{nFK} = p$ regardless of off-diagonal magnitude &mdash; the off-diagonal correlation is read as true-score association, not as a measurement-information loss. To register inter-item correlation as measurement error, the reduction has to live on the diagonal as reliability or communality below 1.
+
+## Other statistics for indexing the effective number of factors or variables in a set
+
+The seven comparison columns to the right of `nFK` come from `poolr::meff()` (Nyholt 2004; Li &amp; Ji 2005; Gao et al. 2008; Galwey 2009; Chen et al. 2012), with two adjustments to poolr's defaults: the final `floor()` that poolr applies for Bonferroni correction is removed (so continuous gradations remain visible), and the two scale-invariant methods (Gao, Galwey) are reported a second time on the matrix as supplied (without forcing diag = 1). Each method reduces to a function of either eigenvalues or matrix entries.
+
+Throughout, $\lambda_1, \ldots, \lambda_p$ are the eigenvalues of the diag-1 correlation matrix and $\lambda_{(j)}$ is the $j$-th largest. For the starred variants, $\mu_k$ replaces $\lambda_k$ &mdash; eigenvalues of the input matrix as supplied (diagonal preserved as reliability or communality). $\mathbb{I}(\cdot)$ is the indicator function and $\lfloor \cdot \rfloor$ is the floor.
+
+**Nyholt (2004).** Moment-based; returns $p$ for equal eigenvalues (no shared variance) and 1 for a rank-1 spectrum. Bakes in the correlation-matrix assumption $\mathrm{mean}(\lambda) = 1$.
+
+$$M_{\text{eff}} \;=\; 1 + (p - 1)\!\left(1 - \frac{\mathrm{Var}(\lambda)}{p}\right)$$
+
+**Li &amp; Ji (2005).** Each eigenvalue $\geq 1$ counts as a full factor (Kaiser's rule); fractional parts contribute partially.
+
+$$M_{\text{eff}} \;=\; \sum_{k=1}^{p}\!\left[\,\mathbb{I}(|\lambda_k| \geq 1) + \bigl(|\lambda_k| - \lfloor |\lambda_k| \rfloor\bigr)\right]$$
+
+**Gao et al. (2008).** Smallest number of leading components needed to capture a fraction $C$ of the eigenvalue sum (poolr default $C = 0.995$). Intrinsically integer.
+
+$$M_{\text{eff}} \;=\; \min\!\left\{k \;:\; \frac{\sum_{j=1}^{k} \lambda_{(j)}}{\sum_{j=1}^{p} \lambda_j} > C\right\}$$
+
+**Galwey (2009).** The participation ratio of the eigenvalue spectrum under a square-root transform of the non-negative eigenvalues. Returns $p$ for an equal spectrum, 1 for rank 1.
+
+$$M_{\text{eff}} \;=\; \frac{\bigl(\sum_{k=1}^{p} \sqrt{\lambda_k^{+}}\,\bigr)^2}{\sum_{k=1}^{p} \lambda_k^{+}}, \qquad \lambda_k^{+} = \max(\lambda_k, 0)$$
+
+**Chen et al. (2012).** Acts on the matrix entries directly via row $\ell_C$ norms (poolr default $C = 7$). Assumes $|R_{ij}| \leq 1$ throughout, so it cannot be transferred to a non-correlation matrix.
+
+$$M_{\text{eff}} \;=\; \sum_{i=1}^{p} \frac{1}{\sum_{j=1}^{p} |R_{ij}|^{C}}$$
+
+**Gao\* and Galwey\* (as supplied).** Identical formulas to Gao and Galwey, evaluated on $\mu_k$ rather than $\lambda_k$. Only these two transfer cleanly: their formulas are scale-invariant in the eigenvalue spectrum, so they remain meaningful when the diagonal carries reliability rather than 1. Nyholt's $\mathrm{mean}(\lambda) = 1$, Li &amp; Ji's threshold of 1, and Chen's $|R_{ij}| \leq 1$ are all violated on the as-supplied matrix.
+
+Each row of the table shows a 6&times;6 input matrix (diagonal = reliability, off-diagonal = inter-item correlation) alongside `nFK` and the seven variants above. The five `meff` columns are computed on a copy with diag forced to 1; `nFK`, `gao*`, and `galwey*` consume the matrix as supplied. Rows that share an off-diagonal pattern but differ in diagonal reliability (e.g., #3 vs #6 vs #8, or #5 vs #7) collapse to identical values across the five `meff` columns, while `nFK`, `gao*`, and `galwey*` separate them.
 
 ```{r references}
 varnames <- c("A", "B", "C", "D", "E", "F")
@@ -119,24 +192,61 @@ fmt_matrix <- function(m, vn, digits = 3) {
   )
 }
 
-fmt_right <- function(nfk_val, ex, description) {
-  nfk_str <- if (is.na(nfk_val)) "ERROR" else sprintf("%.3f", nfk_val)
+fmt_desc <- function(ex, description) {
   sprintf(
-    "<div><span class='nfk-value'>nFK = %s</span></div><div class='nfk-desc'><span class='nfk-ex'>%s</span> %s</div>",
-    nfk_str, ex, description
+    "<div class='nfk-desc'><span class='nfk-ex'>%s</span> %s</div>",
+    ex, description
+  )
+}
+
+fmt_num <- function(x) {
+  if (is.na(x)) return("&mdash;")
+  if (abs(x - round(x)) < 1e-6) return(sprintf("%d", as.integer(round(x))))
+  sprintf("%.3f", x)
+}
+
+meff_methods <- c("nyholt", "liji", "gao", "galwey", "chen", "gao_asis", "galwey_asis")
+
+# Unfloored versions of the five poolr::meff() formulas. poolr applies
+# floor(m) before returning to give a conservative integer count for
+# Bonferroni correction; we skip that step here so the continuous
+# gradations distinguishing matrices remain visible. The first five use a
+# diag-1 copy because their formulas assume a correlation matrix; the two
+# scale-invariant methods (Gao, Galwey) are also computed on the matrix
+# as supplied so the reliability-on-diagonal information is retained.
+meff_raw <- function(m) {
+  R <- m; diag(R) <- 1
+  evs       <- eigen(R, symmetric = TRUE)$values
+  evs_pos   <- pmax(evs, 0)
+  k         <- length(evs)
+  abs_evs   <- abs(evs) + sqrt(.Machine$double.eps)
+
+  evs_asis  <- pmax(eigen(m, symmetric = TRUE)$values, 0)
+
+  c(
+    nyholt      = 1 + (k - 1) * (1 - var(evs) / k),
+    liji        = sum(ifelse(abs_evs >= 1, 1, 0) + (abs_evs - floor(abs_evs))),
+    gao         = which(cumsum(sort(evs, decreasing = TRUE)) / sum(evs) > 0.995)[1],
+    galwey      = sum(sqrt(evs_pos))^2 / sum(evs_pos),
+    chen        = sum(1 / apply(R, 1, function(r) sum(abs(r)^7))),
+    gao_asis    = which(cumsum(sort(evs_asis, decreasing = TRUE)) / sum(evs_asis) > 0.995)[1],
+    galwey_asis = sum(sqrt(evs_asis))^2 / sum(evs_asis)
   )
 }
 
 ref_results <- lapply(ref, function(r) {
   res <- tryCatch(suppressWarnings(nFK(r$m)), error = function(e) NULL)
   nfk_val <- if (is.null(res)) NA_real_ else res$nFK
+  meff_vec <- tryCatch(meff_raw(r$m),
+                       error = function(e) setNames(rep(NA_real_, length(meff_methods)), meff_methods))
   list(
     ex          = r$ex,
     diag        = r$diag,
     r           = r$r,
     nFK         = nfk_val,
+    meff        = meff_vec,
     matrix_html = fmt_matrix(r$m, varnames),
-    info_html   = fmt_right(nfk_val, r$ex, r$description)
+    desc_html   = fmt_desc(r$ex, r$description)
   )
 })
 
@@ -149,16 +259,45 @@ ref_points <- data.frame(
   stringsAsFactors = FALSE
 )
 
+get_meff <- function(name) {
+  vapply(ref_results, function(r) fmt_num(r$meff[[name]]), character(1))
+}
+
+fmt_nfk <- function(x) if (is.na(x)) "&mdash;" else sprintf("%.3f", x)
+
 df <- data.frame(
-  Matrix         = vapply(ref_results, `[[`, character(1), "matrix_html"),
-  `nFK and notes`= vapply(ref_results, `[[`, character(1), "info_html"),
-  check.names    = FALSE,
-  stringsAsFactors = FALSE
+  Matrix                = vapply(ref_results, `[[`, character(1), "matrix_html"),
+  `Matrix description`  = vapply(ref_results, `[[`, character(1), "desc_html"),
+  nFK                   = vapply(ref_results, function(r) fmt_nfk(r$nFK), character(1)),
+  nyholt                = get_meff("nyholt"),
+  liji                  = get_meff("liji"),
+  gao                   = get_meff("gao"),
+  galwey                = get_meff("galwey"),
+  chen                  = get_meff("chen"),
+  `gao*`                = get_meff("gao_asis"),
+  `galwey*`             = get_meff("galwey_asis"),
+  check.names           = FALSE,
+  stringsAsFactors      = FALSE
 )
 
-kbl <- knitr::kable(df, format = "html", escape = FALSE, table.attr = "class='nfk-ref'")
+kbl <- knitr::kable(
+  df, format = "html", escape = FALSE,
+  align = c("l", "l", "r", "r", "r", "r", "r", "r", "r", "r"),
+  table.attr = "class='nfk-ref'"
+)
 htmltools::HTML(as.character(kbl))
 ```
+
+## Per-component reliabilities
+
+`nFK()` returns more than the headline total. The full output includes `r2` &mdash; the per-component &omega;<sub>max</sub> vector that sums to `nFK` &mdash; alongside the `PCAloadings`. The vector is independently informative: it shows which dimensions are reliably measured and which are not. Case #11 above (variable A constructed as a perfect linear combination of B, C, D, so the matrix has rank 5) makes this explicit:
+
+```{r r2_demo}
+res11 <- nFK(ref[[11]]$m)
+round(res11$r2, 3)
+```
+
+The first five components hit `r2 = 1` (perfectly recoverable from the items), and PC6 contributes exactly 0 &mdash; the rank-5 matrix cannot support a sixth orthogonal factor. The total `nFK = 5` is the count of unit r&sup2; entries; rank deficiency surfaces directly in the per-component vector.
 
 ## Connection to coefficient alpha and Spearman-Brown reliability
 
@@ -199,9 +338,33 @@ Cases #5 and #6 (r = 0.2 and r = 0.7, both with diag = 1) both yield `nFK = 6`, 
 
 To register inter-item correlation as a *measurement-information* loss, the reduction must live on the diagonal. That is the role of nFK's diagonal input: it carries reliability (or communality), and the off-diagonals describe the structure of true-score associations among items. Setting r = 0.7 with diag = 1 (case #6) asks nFK to read "I have six perfectly-measured items that happen to correlate"; setting diag &lt; 1 (as in #3, #4, #7, #8, #10) shifts the matrix toward "each item recovers less than full true-score variance," and the formula responds accordingly. The contrast is clearest between #5 vs #7 and #6 vs #8: identical off-diagonal patterns at diag = 1 give nFK = 6, while at diag = 0.9 the same matrices give 5.325 and 4.311 respectively. Cases #5 and #6 thus serve as demonstrations of the principle &mdash; not failures of the formula.
 
+## Rotation: total invariance, per-component redistribution
+
+`nFK()` accepts `rotate = "none"` (default) or `rotate = "varimax"`, applied to the principal-component loadings before `r2` is computed. Total `nFK` is invariant under orthogonal rotation &mdash; the same dimensional content is being re-expressed, not changed &mdash; but the per-component `r2` values redistribute. When the question is "what is the reliability of each rotated factor?" rather than "what is the dimensionality of the set?", the rotated `r2` vector is the primary output.
+
+Two clean clusters of three items each (within-cluster *r* = 0.7, between-cluster *r* = 0, diagonal = 0.9):
+
+```{r rotate_demo}
+m_two <- matrix(0, 6, 6)
+m_two[1:3, 1:3] <- 0.7
+m_two[4:6, 4:6] <- 0.7
+diag(m_two) <- 0.9
+dimnames(m_two) <- list(varnames, varnames)
+
+res_none <- nFK(m_two, rotate = "none")
+res_vmax <- nFK(m_two, rotate = "varimax")
+
+cat(sprintf("Total nFK (unrotated):  %.4f\n", res_none$nFK))
+cat(sprintf("Total nFK (varimax):    %.4f\n\n", res_vmax$nFK))
+cat("Per-component r2 (unrotated):\n"); print(round(res_none$r2, 3))
+cat("\nPer-component r2 (varimax):\n");   print(round(res_vmax$r2, 3))
+```
+
+The unrotated decomposition follows the closed forms from cases #7&ndash;#8 applied within each cluster: each cluster's leading composite carries r&sup2; = (d + (k&minus;1)r)/(1 + (k&minus;1)r) = 2.3/2.4 = 0.958, and each within-cluster contrast carries (d&minus;r)/(1&minus;r) = 0.667. Varimax (with Kaiser normalization) shifts a small amount of loading mass between cluster and noise components, so the cluster components drop slightly and two of the contrast components rise &mdash; but the totals match exactly.
+
 ## Uniform-correlation sweeps
 
-For a *p* &times; *p* matrix with constant diagonal *d* and constant off-diagonal *r*, the curves below trace nFK as *r* varies. One curve per reliability level *d* &isin; {0.1, 0.2, &hellip;, 1.0}; for each curve, *r* runs from 0 to *d* (beyond *r* = *d* the matrix is no longer positive semi-definite). Each panel uses its own y-axis so the curve shape is visible at every scale. Reference cases from the table above are annotated on the *p* = 6 panel.
+For a *p* &times; *p* matrix with constant diagonal *d* and constant off-diagonal *r*, the curves below trace nFK as *r* varies. One curve per reliability level *d* &isin; {0.1, 0.2, &hellip;, 1.0}; for each curve, *r* runs from 0 to *d* (beyond *r* = *d* the matrix is no longer positive semi-definite). A dotted curve at *d* = 0.99 (off the 0.1 grid) is included as a contrast point: with diag = 1.0, nFK stays at *p* for all *r*, but a 1% nudge below perfect reliability lets the statistic descend smoothly toward 1 as *r* &rarr; 0.99. Each panel uses its own y-axis so the curve shape is visible at every scale. Reference cases from the table above are annotated on the *p* = 6 panel.
 
 ```{r sweep, fig.width=9, fig.height=6.5}
 sweep_uniform <- function(p, dg, rs) {
@@ -214,9 +377,10 @@ sweep_uniform <- function(p, dg, rs) {
   out
 }
 
-diags  <- seq(0.1, 1.0, by = 0.1)
-ps     <- c(2, 6, 60, 120)
-r_step <- 0.01
+diags      <- seq(0.1, 1.0, by = 0.1)
+diag_extra <- 0.99
+ps         <- c(2, 6, 60, 120)
+r_step     <- 0.01
 
 df_sweep <- do.call(rbind, lapply(ps, function(p) {
   do.call(rbind, lapply(diags, function(d) {
@@ -227,12 +391,39 @@ df_sweep <- do.call(rbind, lapply(ps, function(p) {
 df_sweep$p_lab <- factor(paste0("p = ", df_sweep$p),
                          levels = paste0("p = ", ps))
 
+# diag = 0.99 sits off the 0.1 grid; rendered separately as a dotted line
+# with per-facet labels so it isn't confused with the regular sweep.
+df_sweep_extra <- do.call(rbind, lapply(ps, function(p) {
+  rs <- seq(0, diag_extra, by = r_step)
+  data.frame(p = p, diag = diag_extra, r = rs, nFK = sweep_uniform(p, diag_extra, rs))
+}))
+df_sweep_extra$p_lab <- factor(paste0("p = ", df_sweep_extra$p),
+                               levels = paste0("p = ", ps))
+
+# Label point: a position on the descending portion of each curve where
+# the dotted line is clearly separated from diag = 1.0.
+extra_labels <- do.call(rbind, lapply(ps, function(p) {
+  sub <- df_sweep_extra[df_sweep_extra$p == p, ]
+  sub[which.min(abs(sub$r - 0.95)), ]
+}))
+extra_labels$label <- "diag = 0.99"
+
 ann <- transform(subset(ref_points, !is.na(r) & !is.na(diag)),
                  p     = 6L,
                  p_lab = factor("p = 6", levels = paste0("p = ", ps)))
 
 ggplot(df_sweep, aes(x = r, y = nFK, color = diag, group = diag)) +
   geom_line(alpha = 0.85, linewidth = 0.6) +
+  geom_line(data = df_sweep_extra,
+            aes(x = r, y = nFK, group = diag),
+            inherit.aes = FALSE,
+            color = "grey20", linetype = "dotted", linewidth = 0.7) +
+  geom_label(data = extra_labels,
+             aes(x = r, y = nFK, label = label),
+             inherit.aes = FALSE,
+             hjust = 1.0, vjust = 1.4, size = 3,
+             label.size = 0, label.padding = unit(0.1, "lines"),
+             fill = alpha("white", 0.7), show.legend = FALSE) +
   geom_point(data = ann, size = 2.6, shape = 21, fill = "white", stroke = 1) +
   geom_label(data = ann, aes(label = ex),
              vjust = -0.4, hjust = -0.1, size = 3.3,
