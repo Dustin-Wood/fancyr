@@ -16,6 +16,10 @@
 #'   \code{qualtRics::metadata()}. Required.
 #' @param sep Character. Separator placed between \code{code=label} pairs in
 #'   the assembled string. Defaults to \code{" | "}.
+#' @param meta Optional. The result of \code{qualtRics::metadata(surveyID)}.
+#'   Supply this when the metadata has already been fetched (e.g.\ inside
+#'   \code{fetch_survey_plus()}) to avoid a redundant API call. Defaults to
+#'   querying the Qualtrics API.
 #' @return A data frame: the output of \code{qualtRics::extract_colmap(survey)}
 #'   with one additional column, \code{value_labels}. Questions that have no
 #'   choice scale (text entry, file upload, etc.) get \code{NA} in this column.
@@ -40,14 +44,14 @@
 #' head(cm[, c("qname", "value_labels")])
 #' }
 #' @export
-extract_colmapPlus <- function(survey, surveyID, sep = " | ") {
+extract_colmapPlus <- function(survey, surveyID, sep = " | ",
+                               meta = qualtRics::metadata(surveyID)) {
   if (!requireNamespace("qualtRics", quietly = TRUE)) {
     stop("Package 'qualtRics' is required for extract_colmapPlus(). ",
          "Install it from CRAN.", call. = FALSE)
   }
 
   cm <- qualtRics::extract_colmap(survey)
-  meta <- qualtRics::metadata(surveyID)
 
   qs <- meta$questions
   if (is.null(qs) || length(qs) == 0L) {

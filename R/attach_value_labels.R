@@ -15,6 +15,10 @@
 #'   columns hold numeric response codes, not text labels).
 #' @param surveyID Character. Survey ID, used to query
 #'   \code{qualtRics::metadata()}.
+#' @param meta Optional. The result of \code{qualtRics::metadata(surveyID)}.
+#'   Supply this when the metadata has already been fetched (e.g.\ inside
+#'   \code{fetch_survey_plus()}) to avoid a redundant API call. Defaults to
+#'   querying the Qualtrics API.
 #' @return The input data frame with \code{haven_labelled} attributes added to
 #'   columns whose questions have a defined choice scale. Columns without a
 #'   choice scale (text entry, file upload, descriptive blocks) are returned
@@ -46,7 +50,8 @@
 #' haven::write_sav(survey_lab, "ReTurk.sav")
 #' }
 #' @export
-attach_value_labels <- function(survey, surveyID) {
+attach_value_labels <- function(survey, surveyID,
+                                meta = qualtRics::metadata(surveyID)) {
   if (!requireNamespace("qualtRics", quietly = TRUE)) {
     stop("Package 'qualtRics' is required for attach_value_labels(). ",
          "Install it from CRAN.", call. = FALSE)
@@ -57,7 +62,6 @@ attach_value_labels <- function(survey, surveyID) {
   }
 
   cm <- qualtRics::extract_colmap(survey)
-  meta <- qualtRics::metadata(surveyID)
   qs <- meta$questions
   if (is.null(qs) || length(qs) == 0L) return(survey)
 

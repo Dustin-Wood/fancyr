@@ -4,7 +4,12 @@
 \alias{extract_colmapPlus}
 \title{Enhanced Qualtrics Column Map with Value Labels}
 \usage{
-extract_colmapPlus(survey, surveyID, sep = " | ")
+extract_colmapPlus(
+  survey,
+  surveyID,
+  sep = " | ",
+  meta = qualtRics::metadata(surveyID)
+)
 }
 \arguments{
 \item{survey}{A survey fetched with \code{qualtRics::fetch_survey()}. The
@@ -16,6 +21,11 @@ metadata is read, not the responses.}
 
 \item{sep}{Character. Separator placed between \code{code=label} pairs in
 the assembled string. Defaults to \code{" | "}.}
+
+\item{meta}{Optional. The result of \code{qualtRics::metadata(surveyID)}.
+Supply this when the metadata has already been fetched (e.g.\ inside
+\code{fetch_survey_plus()}) to avoid a redundant API call. Defaults to
+querying the Qualtrics API.}
 }
 \value{
 A data frame: the output of \code{qualtRics::extract_colmap(survey)}

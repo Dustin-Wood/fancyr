@@ -4,7 +4,7 @@
 \alias{attach_value_labels}
 \title{Attach Value Labels to a Qualtrics Data Frame}
 \usage{
-attach_value_labels(survey, surveyID)
+attach_value_labels(survey, surveyID, meta = qualtRics::metadata(surveyID))
 }
 \arguments{
 \item{survey}{A data frame fetched with
@@ -13,6 +13,11 @@ columns hold numeric response codes, not text labels).}
 
 \item{surveyID}{Character. Survey ID, used to query
 \code{qualtRics::metadata()}.}
+
+\item{meta}{Optional. The result of \code{qualtRics::metadata(surveyID)}.
+Supply this when the metadata has already been fetched (e.g.\ inside
+\code{fetch_survey_plus()}) to avoid a redundant API call. Defaults to
+querying the Qualtrics API.}
 }
 \value{
 The input data frame with \code{haven_labelled} attributes added to
