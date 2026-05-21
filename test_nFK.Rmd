@@ -4,6 +4,7 @@ output:
   html_document:
     theme: cosmo
     df_print: paged
+knit: (function(input, ...) rmarkdown::render(input, output_dir = "docs", ...))
 ---
 
 ```{r setup, include=FALSE}
