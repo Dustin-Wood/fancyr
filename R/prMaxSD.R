@@ -20,7 +20,10 @@
 #'     Note also that the code makes a minor adjustment to calculate within-person standard deviation
 #' as the population estimate (using N rather than N-1) to make maximum possible = 1
 #' @return estimate of the proportion of the observed standard deviation
-#' of the row scores from max possible (range from 0 to 1)
+#' of the row scores from max possible (range from 0 to 1). Rows (or columns,
+#' if \code{dir = 2}) with fewer than two non-missing responses return
+#' \code{NA}, since variability is undefined there; this includes all-missing
+#' rows, which are common for non-respondents in a screening pass.
 #' @export
 #' @examples
 #' # Three respondents rating 5 items on a 1-5 scale
@@ -45,6 +48,13 @@ prMaxSD <- function(data, smin, smax, dir=1) {
     data <- as.matrix(data)
   }
   sd.p <- function(x) { sd(as.matrix(x), na.rm = TRUE) }
-  prMaxSD <- apply(data, dir, function(x) sd.p(x)*sqrt((sum(!is.na(x))-1)/sum(!is.na(x)))/((smax-smin)/2))
+  prMaxSD <- apply(data, dir, function(x) {
+    n <- sum(!is.na(x))
+    # Fewer than two responses -> variability is undefined; return NA. The
+    # guard also avoids sqrt() of a negative on all-NA rows (the lone source
+    # of the old "NaNs produced" warning).
+    if (n < 2) return(NA_real_)
+    sd.p(x) * sqrt((n - 1) / n) / ((smax - smin) / 2)
+  })
   return(prMaxSD)
 }

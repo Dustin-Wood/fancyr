@@ -226,10 +226,9 @@ qScreen <- function(data, cols, smin, smax, items = NULL,
                t_last  = zapNum(data[[lastCol]]),
                n_items = nItemsForSpi)
 
-  # Rows with no (or one) item rated legitimately yield NA here; prMaxSD's
-  # internal sd() warns "NaNs produced" on those, which is expected noise for a
-  # screening pass over data that includes non-respondents -- so muffle it.
-  variability <- suppressWarnings(prMaxSD(itemMat, smin = smin, smax = smax))
+  # Rows with fewer than two items rated yield NA from prMaxSD() (variability
+  # undefined), which is the expected result for non-respondents.
+  variability <- prMaxSD(itemMat, smin = smin, smax = smax)
   nRated <- rowSums(is.finite(itemMat))
 
   data.frame(

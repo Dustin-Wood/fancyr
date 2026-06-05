@@ -17,7 +17,10 @@ prMaxSD(data, smin, smax, dir = 1)
 }
 \value{
 estimate of the proportion of the observed standard deviation
-of the row scores from max possible (range from 0 to 1)
+of the row scores from max possible (range from 0 to 1). Rows (or columns,
+if \code{dir = 2}) with fewer than two non-missing responses return
+\code{NA}, since variability is undefined there; this includes all-missing
+rows, which are common for non-respondents in a screening pass.
 }
 \description{
 For a specified set of variables (with a common range), estimate the percentage
