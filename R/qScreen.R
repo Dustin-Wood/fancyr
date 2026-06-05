@@ -214,12 +214,16 @@ qScreen <- function(data, cols, smin, smax, items = NULL,
   } else {
     itemIdx <- as.integer(items)
   }
-  itemMat <- data.matrix(data[, itemIdx, drop = FALSE])
+  # zapNum() coerces each column to plain numeric, tolerating the
+  # haven_labelled columns that fetch_survey_plus() attaches (a bare
+  # as.numeric() / data.matrix() can error on those under recent vctrs).
+  itemMat <- vapply(data[, itemIdx, drop = FALSE], zapNum,
+                    numeric(nrow(data)))
 
   # --- compute the two indicators -----------------------------------------
   nItemsForSpi <- ifelse(nByRow >= 2, nByRow, NA_integer_)
-  speed <- spi(t_first = as.numeric(data[[firstCol]]),
-               t_last  = as.numeric(data[[lastCol]]),
+  speed <- spi(t_first = zapNum(data[[firstCol]]),
+               t_last  = zapNum(data[[lastCol]]),
                n_items = nItemsForSpi)
 
   # Rows with no (or one) item rated legitimately yield NA here; prMaxSD's
