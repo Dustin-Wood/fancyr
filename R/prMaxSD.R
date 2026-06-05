@@ -35,6 +35,15 @@
 #' mat[scores >= .25, ]
 
 prMaxSD <- function(data, smin, smax, dir=1) {
+  # Coerce to a plain numeric matrix, tolerating haven_labelled / factor
+  # columns (e.g. straight from fetch_survey_plus): a bare as.matrix()/apply()
+  # can error on those under recent vctrs. zapNum() strips the class first.
+  if (is.data.frame(data)) {
+    data <- vapply(data, zapNum, numeric(nrow(data)))
+    if (is.null(dim(data))) data <- matrix(data, nrow = 1)
+  } else {
+    data <- as.matrix(data)
+  }
   sd.p <- function(x) { sd(as.matrix(x), na.rm = TRUE) }
   prMaxSD <- apply(data, dir, function(x) sd.p(x)*sqrt((sum(!is.na(x))-1)/sum(!is.na(x)))/((smax-smin)/2))
   return(prMaxSD)

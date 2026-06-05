@@ -52,5 +52,11 @@
 #' rates <- spi(t_first = c(5, 3, 8), t_last = c(30, 9, 40), n_items = 10)
 #' careless <- rates < 1
 spi <- function(t_first, t_last, n_items) {
+  # zapNum() tolerates haven_labelled timing columns (e.g. from
+  # fetch_survey_plus); arithmetic on a live haven_labelled can error under
+  # recent vctrs. Harmless on already-numeric input.
+  t_first <- zapNum(t_first)
+  t_last  <- zapNum(t_last)
+  n_items <- zapNum(n_items)
   (t_last - t_first) / (n_items - 1)
 }
