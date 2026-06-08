@@ -31,8 +31,11 @@
 #'   columns are cx-transformed once before scoring. Must be supplied together.
 #' @param return_original Logical; if \code{TRUE} and \code{smin}/\code{smax}
 #'   are given, scale means are returned on the original \eqn{[smin, smax]}
-#'   range via \code{\link{uncx}}. Alpha values are always on the cx scale.
-#'   Default \code{FALSE}.
+#'   range via \code{\link{uncx}}. The overall \code{raw_alpha} is
+#'   scale-invariant. Default \code{FALSE}.
+#' @param label_reversed Logical; if \code{TRUE} (default), reverse-scored
+#'   items (\code{sign == -1}) are flagged with \code{" [R]"} in the row
+#'   labels of each scale's \code{alpha$item.stats}.
 #'
 #' @return A list with:
 #'   \describe{
@@ -41,18 +44,25 @@
 #'       \code{return_original = TRUE}.}
 #'     \item{\code{alphas}}{Named list of full \code{psych::alpha} results,
 #'       one per scale. Access a numeric value via
-#'       \code{alphas$ScaleName$total$raw_alpha}.}
-#'     \item{\code{miskeyed}}{Data frame with columns \code{scale} and
+#'       \code{alphas$ScaleName$total$raw_alpha}. When \code{smin}/\code{smax}
+#'       are supplied, the \code{mean} and \code{sd} columns of each
+#'       \code{$item.stats} are on the original \eqn{[smin, smax]} metric
+#'       (other columns such as \code{r.cor}/\code{r.drop} are unchanged), and
+#'       reverse-scored items carry a \code{" [R]"} suffix in their row labels
+#'       when \code{label_reversed = TRUE}.}
+#'     \item{\code{possiblyMiskeyed}}{Data frame with columns \code{scale} and
 #'       \code{item} listing every item whose item-rest correlation
-#'       (\code{r.drop}) is negative after sign correction, suggesting
-#'       incorrect keying. \code{NULL} when no items are flagged. A message
-#'       is also printed summarising the count.}
+#'       (\code{r.drop}) is negative after sign correction. This is a
+#'       diagnostic to investigate, not proof of a keying error: a correctly
+#'       keyed item can still correlate negatively with the rest of its scale.
+#'       \code{NULL} when no items are flagged. A message is also printed
+#'       summarising the count.}
 #'   }
 #'
 #' @details
 #' When \code{smin}/\code{smax} are supplied, the cx-transformation is applied
 #' once to the full item subset before iterating over scales. The out-of-range
-#' warning and the miskeyed message each fire at most once per call.
+#' warning and the diagnostic message each fire at most once per call.
 #' Items not found in \code{colnames(data)} trigger a warning and are skipped.
 #'
 #' @seealso \code{\link{cScale}} for single-scale computation;
@@ -78,17 +88,17 @@
 #'                      smin = 1, smax = 5)
 #' out$scaleMeans
 #' sapply(out$alphas, function(a) round(a$total$raw_alpha, 3))
-#' out$miskeyed   # NULL: no miskeyed items with correct key
+#' out$possiblyMiskeyed   # NULL: nothing flagged with the correct key
 #'
-#' # Screen for miskeyed items by ignoring the sign column
+#' # Surface items to investigate by ignoring the sign column
 #' screen <- makeAllScales(d, key, scaleCol = "scale", itemCol = "item",
 #'                         signCol = "all1", smin = 1, smax = 5)
-#' screen$miskeyed   # item2 flagged in scale A
+#' screen$possiblyMiskeyed   # item2 flagged in scale A for inspection
 #'
 #' @export
 makeAllScales <- function(data, key, scaleCol, itemCol, signCol = "sign",
                           na.rm = TRUE, smin = NULL, smax = NULL,
-                          return_original = FALSE) {
+                          return_original = FALSE, label_reversed = TRUE) {
   for (col in c(scaleCol, itemCol)) {
     if (!col %in% names(key))
       stop(sprintf("Column '%s' not found in key.", col))
@@ -141,7 +151,8 @@ makeAllScales <- function(data, key, scaleCol, itemCol, signCol = "sign",
 
   results <- lapply(scale_groups, function(s) {
     cScale(item_data, all_signs, s[[itemCol]], na.rm = na.rm,
-           .check_range = FALSE)
+           smin = smin, smax = smax, label_reversed = label_reversed,
+           .check_range = FALSE, .already_cx = TRUE)
   })
 
   scaleMeans <- as.data.frame(
@@ -155,24 +166,24 @@ makeAllScales <- function(data, key, scaleCol, itemCol, signCol = "sign",
       check.names = FALSE
     )
 
-  # Collect miskeyed items across all scales and report once
+  # Collect flagged items across all scales and report once
   mk_list <- Filter(Negate(is.null), lapply(names(results), function(sc) {
-    mk <- results[[sc]]$miskeyed
+    mk <- results[[sc]]$possiblyMiskeyed
     if (length(mk) > 0)
       data.frame(scale = sc, item = mk, stringsAsFactors = FALSE)
     else NULL
   }))
-  miskeyed <- if (length(mk_list) > 0) do.call(rbind, mk_list) else NULL
+  possiblyMiskeyed <- if (length(mk_list) > 0) do.call(rbind, mk_list) else NULL
 
-  if (!is.null(miskeyed))
+  if (!is.null(possiblyMiskeyed))
     message(sprintf(
-      "%d item(s) across %d scale(s) have negative item-rest correlations and may be miskeyed; see $miskeyed.",
-      nrow(miskeyed), length(unique(miskeyed$scale))
+      "%d item(s) across %d scale(s) have negative item-rest correlations after sign-scoring; inspect $possiblyMiskeyed to check for keying errors (a flag is not proof of one).",
+      nrow(possiblyMiskeyed), length(unique(possiblyMiskeyed$scale))
     ))
 
   list(
-    scaleMeans = scaleMeans,
-    alphas     = lapply(results, `[[`, "alpha"),
-    miskeyed   = miskeyed
+    scaleMeans       = scaleMeans,
+    alphas           = lapply(results, `[[`, "alpha"),
+    possiblyMiskeyed = possiblyMiskeyed
   )
 }

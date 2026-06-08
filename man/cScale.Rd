@@ -12,7 +12,9 @@ cScale(
   smin = NULL,
   smax = NULL,
   return_original = FALSE,
-  .check_range = TRUE
+  label_reversed = TRUE,
+  .check_range = TRUE,
+  .already_cx = FALSE
 )
 }
 \arguments{
@@ -38,26 +40,45 @@ cx-transformed internally before scoring. Must be supplied together.}
 
 \item{return_original}{Logical; if \code{TRUE} and \code{smin}/\code{smax}
 are given, the scale mean is returned on the original
-\eqn{[smin, smax]} range via \code{\link{uncx}}. Alpha is always
-reported on the cx scale. Default \code{FALSE}.}
+\eqn{[smin, smax]} range via \code{\link{uncx}}. The overall
+\code{raw_alpha} is scale-invariant and unaffected. Default \code{FALSE}.}
+
+\item{label_reversed}{Logical; if \code{TRUE} (default), the row labels of
+\code{alpha$item.stats} for reverse-scored items (\code{sign == -1}) have
+\code{" [R]"} appended, so it is clear which items were reflected before
+computing the displayed means.}
 
 \item{.check_range}{Internal use only. When \code{FALSE}, skips the
 \eqn{[-1,1]} range check (used by \code{\link{makeAllScales}} to
 avoid redundant per-scale warnings after a single up-front check).}
+
+\item{.already_cx}{Internal use only. When \code{TRUE}, \code{data} is
+assumed to already be cx-transformed to \eqn{[-1,1]}, so the cx step is
+skipped even when \code{smin}/\code{smax} are supplied; the endpoints are
+then used only to report \code{item.stats} means/SDs on the original
+metric (used by \code{\link{makeAllScales}}).}
 }
 \value{
 A list with:
   \describe{
     \item{\code{alpha}}{Full \code{psych::alpha} result on the
-      sign-corrected, cx-scaled items. Access the numeric value via
-      \code{$alpha$total$raw_alpha}.}
+      sign-corrected items. Access the numeric value via
+      \code{$alpha$total$raw_alpha}. When \code{smin}/\code{smax} are
+      supplied, the \code{mean} and \code{sd} columns of
+      \code{$item.stats} are reported on the original \eqn{[smin, smax]}
+      metric (all other columns, e.g. \code{r.cor} and \code{r.drop}, are
+      scale-invariant and unchanged). When \code{label_reversed = TRUE},
+      reverse-scored items are flagged with \code{" [R]"} in the
+      \code{item.stats} row labels.}
     \item{\code{scaleMean}}{Numeric vector of row-wise means. On the
       cx \eqn{[-1, 1]} scale by default; on \eqn{[smin, smax]} when
       \code{return_original = TRUE}.}
-    \item{\code{miskeyed}}{Character vector of item names whose
+    \item{\code{possiblyMiskeyed}}{Character vector of item names whose
       item-rest correlation (\code{r.drop}) is negative after sign
-      correction, suggesting they may be incorrectly keyed.
-      \code{character(0)} when none are flagged.}
+      correction. This is a diagnostic flag for the user to investigate,
+      not evidence that keying is wrong: an item can be correctly keyed yet
+      still correlate negatively with the rest of its scale (e.g. a weak or
+      multidimensional item). \code{character(0)} when none are flagged.}
   }
 }
 \description{
@@ -69,8 +90,16 @@ miskeyed items for the selected items.
 Sign correction is applied as \code{items_matrix \%*\% diag(sign[items])},
 which scales each item column by its sign. \code{psych::alpha} is called
 with \code{check.keys = FALSE} because items are already sign-corrected.
-Miskeyed items are identified as those with a negative \code{r.drop}
-(item-rest correlation) in \code{alpha$item.stats}.
+Possibly-miskeyed items are flagged as those with a negative \code{r.drop}
+(item-rest correlation) in \code{alpha$item.stats}; this check uses the
+unlabelled item names, so the \code{$possiblyMiskeyed} vector never carries
+the \code{" [R]"} suffix. A flag here is a prompt to inspect the item, not
+a conclusion that the key is wrong.
+
+The \code{item.stats} means/SDs are placed on the original metric by
+applying the \code{\link{uncx}} transformation to the reported (cx-scale)
+values rather than by re-running \code{psych::alpha}, so the remaining
+columns are guaranteed identical to the cx-scale fit.
 }
 \examples{
 d <- data.frame(
@@ -82,11 +111,11 @@ d <- data.frame(
 # Correct keying: item2 scored -1
 res <- cScale(d, sign = c(1, -1, 1), items = colnames(d), smin = 1, smax = 5)
 res$alpha$total$raw_alpha
-res$miskeyed   # character(0): no miskeyed items
+res$possiblyMiskeyed   # character(0): nothing flagged
 
-# All items scored +1 — item2 will appear miskeyed
+# All items scored +1 — item2 will be flagged for inspection
 res_all1 <- cScale(d, sign = c(1, 1, 1), items = colnames(d), smin = 1, smax = 5)
-res_all1$miskeyed
+res_all1$possiblyMiskeyed
 
 }
 \seealso{
