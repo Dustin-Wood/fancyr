@@ -9,6 +9,11 @@
 #' are drawn as curved dashed double-headed arrows arcing out to the left.
 #' Full item and experience variable labels are placed outside the nodes.
 #'
+#' Set \code{show_controls = FALSE} to omit control variables entirely, which
+#' reduces the diagram to a simple Y1 -> X -> Y2 triangle. Note that the
+#' remaining path coefficients are still the control-adjusted estimates from
+#' the fitted model; only their display is suppressed.
+#'
 #' @param pe A single \code{parameterestimates()} data frame from
 #'   \code{out$xEffects$modelEstimates[["item name"]]}.
 #' @param item_label Full display name for the item (shown below Y1 and Y2,
@@ -17,7 +22,11 @@
 #'   (shown above the X node).
 #' @param control_labels Character vector of display names for control variables,
 #'   in the order they appear in \code{pe}. If \code{NULL} (default), sanitized
-#'   variable names extracted from \code{pe} are used.
+#'   variable names extracted from \code{pe} are used. Ignored when
+#'   \code{show_controls = FALSE}.
+#' @param show_controls Logical. If \code{FALSE}, control variables, their paths,
+#'   and their covariance arcs are left off the diagram, yielding a Y1 -> X -> Y2
+#'   triangle. Default is \code{TRUE}.
 #' @param digits Integer. Number of decimal places for path coefficients.
 #'   Default is \code{2}.
 #' @param show_pvalues Logical. If \code{TRUE}, append the p-value in
@@ -48,26 +57,36 @@
 #'   x_label        = "NL110 Fall Course",
 #'   control_labels = c("Gender", "SAT Math")
 #' )
+#'
+#' # Same model, but showing only the Y1 -> X -> Y2 triangle
+#' plotMedX(
+#'   pe            = out$xEffects$modelEstimates[[item_name]],
+#'   item_label    = item_name,
+#'   x_label       = "NL110 Fall Course",
+#'   show_controls = FALSE
+#' )
 #' }
 plotMedX <- function(pe, item_label, x_label,
                      control_labels = NULL,
+                     show_controls = TRUE,
                      digits = 2,
                      show_pvalues = FALSE,
                      title = NULL) {
 
   # ── 1. Detect controls ──────────────────────────────────────────────────────
   ctrl_names <- pe$rhs[pe$lhs == "X" & pe$op == "~" & pe$rhs != "Y1"]
-
-  if (is.null(control_labels)) {
-    control_labels <- ctrl_names
-  } else if (length(control_labels) != length(ctrl_names)) {
-    warning("Length of control_labels (", length(control_labels),
-            ") does not match number of controls detected in pe (",
-            length(ctrl_names), "). Using sanitized names from pe.")
-    control_labels <- ctrl_names
-  }
+  if (!show_controls) ctrl_names <- character(0)
 
   n_ctrl <- length(ctrl_names)
+
+  if (is.null(control_labels) || n_ctrl == 0) {
+    control_labels <- ctrl_names
+  } else if (length(control_labels) != n_ctrl) {
+    warning("Length of control_labels (", length(control_labels),
+            ") does not match number of controls detected in pe (",
+            n_ctrl, "). Using sanitized names from pe.")
+    control_labels <- ctrl_names
+  }
 
   # ── 2. Extract path and covariance estimates ─────────────────────────────────
   get_est <- function(lhs_val, rhs_val) {
@@ -112,7 +131,9 @@ plotMedX <- function(pe, item_label, x_label,
   node_names  <- c("Y1", "X", "Y2", ctrl_names)
   n_nodes     <- length(node_names)
   idx         <- setNames(seq_along(node_names), node_names)
-  node_labels <- c("Y1", "X", "Y2", paste0("C", seq_len(n_ctrl)))
+  # guard: paste0("C", seq_len(0)) yields "C", not character(0)
+  ctrl_labels <- if (n_ctrl > 0) paste0("C", seq_len(n_ctrl)) else character(0)
+  node_labels <- c("Y1", "X", "Y2", ctrl_labels)
 
   # ── 5. Regression-only edge list (covariances drawn manually later) ───────────
   make_edge <- function(from_name, to_name, path_info) {
@@ -158,7 +179,8 @@ plotMedX <- function(pe, item_label, x_label,
     edge.label.cex = 0.85,
     node.width     = 0.9,
     node.height    = 0.55,
-    mar            = c(6, 10, 6, 6),
+    # extra left margin only when covariance arcs need to bow out past Y1
+    mar            = c(6, if (n_ctrl > 0) 10 else 6, 6, 6),
     title          = title,
     DoNotPlot      = FALSE
   )

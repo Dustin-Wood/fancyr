@@ -9,6 +9,7 @@ plotMedX(
   item_label,
   x_label,
   control_labels = NULL,
+  show_controls = TRUE,
   digits = 2,
   show_pvalues = FALSE,
   title = NULL
@@ -26,7 +27,12 @@ since these are the same construct measured at two time points).}
 
 \item{control_labels}{Character vector of display names for control variables,
 in the order they appear in \code{pe}. If \code{NULL} (default), sanitized
-variable names extracted from \code{pe} are used.}
+variable names extracted from \code{pe} are used. Ignored when
+\code{show_controls = FALSE}.}
+
+\item{show_controls}{Logical. If \code{FALSE}, control variables, their paths,
+and their covariance arcs are left off the diagram, yielding a Y1 -> X -> Y2
+triangle. Default is \code{TRUE}.}
 
 \item{digits}{Integer. Number of decimal places for path coefficients.
 Default is \code{2}.}
@@ -49,6 +55,11 @@ at left, Y2 (follow-up item score) at right, and any control variables
 stacked below-left. Covariances (Y1 with controls, and between controls)
 are drawn as curved dashed double-headed arrows arcing out to the left.
 Full item and experience variable labels are placed outside the nodes.
+
+Set \code{show_controls = FALSE} to omit control variables entirely, which
+reduces the diagram to a simple Y1 -> X -> Y2 triangle. Note that the
+remaining path coefficients are still the control-adjusted estimates from
+the fitted model; only their display is suppressed.
 }
 \examples{
 \dontrun{
@@ -66,6 +77,14 @@ plotMedX(
   item_label     = item_name,
   x_label        = "NL110 Fall Course",
   control_labels = c("Gender", "SAT Math")
+)
+
+# Same model, but showing only the Y1 -> X -> Y2 triangle
+plotMedX(
+  pe            = out$xEffects$modelEstimates[[item_name]],
+  item_label    = item_name,
+  x_label       = "NL110 Fall Course",
+  show_controls = FALSE
 )
 }
 }
