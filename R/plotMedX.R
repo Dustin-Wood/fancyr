@@ -18,8 +18,9 @@
 #'   \code{out$xEffects$modelEstimates[["item name"]]}.
 #' @param item_label Full display name for the item (shown below Y1 and Y2,
 #'   since these are the same construct measured at two time points).
+#'   Optional; if \code{NULL}, no label is drawn.
 #' @param x_label Full display name for the experience/predictor variable
-#'   (shown above the X node).
+#'   (shown above the X node). Optional; if \code{NULL}, no label is drawn.
 #' @param control_labels Character vector of display names for control variables,
 #'   in the order they appear in \code{pe}. If \code{NULL} (default), sanitized
 #'   variable names extracted from \code{pe} are used. Ignored when
@@ -27,6 +28,11 @@
 #' @param show_controls Logical. If \code{FALSE}, control variables, their paths,
 #'   and their covariance arcs are left off the diagram, yielding a Y1 -> X -> Y2
 #'   triangle. Default is \code{TRUE}.
+#' @param show_labels Logical. If \code{FALSE}, all text labels are omitted:
+#'   path coefficients (and p-values), covariance coefficients, and the
+#'   \code{item_label}/\code{x_label}/\code{control_labels} variable names.
+#'   Only the nodes, paths, and covariance arcs are drawn. Default is
+#'   \code{TRUE}.
 #' @param digits Integer. Number of decimal places for path coefficients.
 #'   Default is \code{2}.
 #' @param show_pvalues Logical. If \code{TRUE}, append the p-value in
@@ -65,10 +71,14 @@
 #'   x_label       = "NL110 Fall Course",
 #'   show_controls = FALSE
 #' )
+#'
+#' # Bare structural diagram: no coefficients or variable names
+#' plotMedX(pe = out$xEffects$modelEstimates[[item_name]], show_labels = FALSE)
 #' }
-plotMedX <- function(pe, item_label, x_label,
+plotMedX <- function(pe, item_label = NULL, x_label = NULL,
                      control_labels = NULL,
                      show_controls = TRUE,
+                     show_labels = TRUE,
                      digits = 2,
                      show_pvalues = FALSE,
                      title = NULL) {
@@ -175,7 +185,7 @@ plotMedX <- function(pe, item_label, x_label,
     layout         = layout_mat,
     labels         = node_labels,
     shape          = "rectangle",
-    edge.labels    = elabels,
+    edge.labels    = if (show_labels) elabels else FALSE,
     edge.label.cex = 0.85,
     node.width     = 0.9,
     node.height    = 0.55,
@@ -199,6 +209,33 @@ plotMedX <- function(pe, item_label, x_label,
     ew <- q$graphAttributes$Edges$lwd
     if (length(ew) > 0 && !is.na(ew[1])) ew[1] else 1
   }, error = function(e) 1)
+
+  edge_lty <- tryCatch({
+    el <- q$graphAttributes$Edges$lty
+    if (length(el) > 0 && !is.na(el[1])) el[1] else 1
+  }, error = function(e) 1)
+
+  # Match qgraph's edge-label styling: labels default to the edge color, and
+  # qgraph rescales label.cex by device size (normalize = TRUE), so reproduce
+  # that factor here or the arc labels come out a different size than the rest.
+  elab_col <- tryCatch({
+    lc <- q$graphAttributes$Edges$label.color
+    if (length(lc) > 0 && !is.na(lc[1])) lc[1] else edge_col
+  }, error = function(e) edge_col)
+
+  elab_font <- tryCatch({
+    lf <- q$graphAttributes$Edges$label.font
+    if (length(lf) > 0 && !is.na(lf[1])) lf[1] else 1
+  }, error = function(e) 1)
+
+  # qgraph computed its normC while plotting under par(mar = c(0,0,0,0)), where
+  # pin equals the figure region; it restores mar before returning, so use fin
+  # (unchanged by that restore) rather than the now-shrunken pin.
+  normC <- sqrt(sum(par("fin")^2)) / sqrt(7^2 + 7^2)
+  elab_cex <- tryCatch({
+    lx <- q$graphAttributes$Edges$label.cex
+    if (length(lx) > 0 && !is.na(lx[1])) lx[1] else 0.85
+  }, error = function(e) 0.85) * normC
 
   # Allow drawing into the margin area (arcs bow left of the plot region)
   old_xpd <- par(xpd = NA)
@@ -228,16 +265,17 @@ plotMedX <- function(pe, item_label, x_label,
     bx <- (1 - t)^2 * x1 + 2 * (1 - t) * t * cx + t^2 * x2
     by <- (1 - t)^2 * y1 + 2 * (1 - t) * t * cy + t^2 * y2
 
-    lines(bx, by, lty = 2, lwd = edge_lwd, col = edge_col)
+    lines(bx, by, lty = edge_lty, lwd = edge_lwd, col = edge_col)
 
     arrows(bx[8],   by[8],   bx[1],   by[1],   length = 0.08,
            angle = 20, code = 2, lwd = edge_lwd, col = edge_col)
     arrows(bx[193], by[193], bx[200], by[200], length = 0.08,
            angle = 20, code = 2, lwd = edge_lwd, col = edge_col)
 
-    lbl <- fmt(path_info)
+    lbl <- if (show_labels) fmt(path_info) else ""
     if (nchar(lbl) > 0)
-      text(bx[100] - 0.05, by[100], lbl, cex = 0.85, adj = c(1, 0.5))
+      text(bx[100] - 0.05, by[100], lbl, cex = elab_cex, col = elab_col,
+           font = elab_font, adj = c(1, 0.5))
   }
 
   for (i in seq_along(ctrl_names))
@@ -260,11 +298,15 @@ plotMedX <- function(pe, item_label, x_label,
          cex    = cex)
   }
 
-  add_label("X",  x_label,    y_offset =  0.18, font = 3)
-  add_label("Y1", item_label, y_offset = -0.18)
-  add_label("Y2", item_label, y_offset = -0.18)
-  for (i in seq_len(n_ctrl))
-    add_label(ctrl_names[i], control_labels[i], y_offset = -0.18)
+  if (show_labels) {
+    if (!is.null(x_label))    add_label("X",  x_label,    y_offset =  0.18, font = 3)
+    if (!is.null(item_label)) {
+      add_label("Y1", item_label, y_offset = -0.18)
+      add_label("Y2", item_label, y_offset = -0.18)
+    }
+    for (i in seq_len(n_ctrl))
+      add_label(ctrl_names[i], control_labels[i], y_offset = -0.18)
+  }
 
   invisible(q)
 }

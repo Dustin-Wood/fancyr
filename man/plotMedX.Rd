@@ -6,10 +6,11 @@
 \usage{
 plotMedX(
   pe,
-  item_label,
-  x_label,
+  item_label = NULL,
+  x_label = NULL,
   control_labels = NULL,
   show_controls = TRUE,
+  show_labels = TRUE,
   digits = 2,
   show_pvalues = FALSE,
   title = NULL
@@ -20,10 +21,11 @@ plotMedX(
 \code{out$xEffects$modelEstimates[["item name"]]}.}
 
 \item{item_label}{Full display name for the item (shown below Y1 and Y2,
-since these are the same construct measured at two time points).}
+since these are the same construct measured at two time points).
+Optional; if \code{NULL}, no label is drawn.}
 
 \item{x_label}{Full display name for the experience/predictor variable
-(shown above the X node).}
+(shown above the X node). Optional; if \code{NULL}, no label is drawn.}
 
 \item{control_labels}{Character vector of display names for control variables,
 in the order they appear in \code{pe}. If \code{NULL} (default), sanitized
@@ -33,6 +35,12 @@ variable names extracted from \code{pe} are used. Ignored when
 \item{show_controls}{Logical. If \code{FALSE}, control variables, their paths,
 and their covariance arcs are left off the diagram, yielding a Y1 -> X -> Y2
 triangle. Default is \code{TRUE}.}
+
+\item{show_labels}{Logical. If \code{FALSE}, all text labels are omitted:
+path coefficients (and p-values), covariance coefficients, and the
+\code{item_label}/\code{x_label}/\code{control_labels} variable names.
+Only the nodes, paths, and covariance arcs are drawn. Default is
+\code{TRUE}.}
 
 \item{digits}{Integer. Number of decimal places for path coefficients.
 Default is \code{2}.}
@@ -86,5 +94,8 @@ plotMedX(
   x_label       = "NL110 Fall Course",
   show_controls = FALSE
 )
+
+# Bare structural diagram: no coefficients or variable names
+plotMedX(pe = out$xEffects$modelEstimates[[item_name]], show_labels = FALSE)
 }
 }
