@@ -26,9 +26,10 @@ A list with two elements:
     \item{\code{data}}{The survey data frame. Plain numeric by default;
       \code{haven_labelled} value- and variable-label attributes are
       attached only when \code{labelled = TRUE}.}
-    \item{\code{colmap}}{The enhanced column map, keeping only the
-      \code{qname}, \code{main}, \code{sub}, and \code{value_labels}
-      columns.}
+    \item{\code{colmap}}{The enhanced column map. Its first column,
+      \code{oo} ("original order"), records each variable's column position
+      in \code{data} (matched by \code{qname}); the remaining columns kept
+      are \code{qname}, \code{main}, \code{sub}, and \code{value_labels}.}
   }
 }
 \description{
@@ -70,7 +71,8 @@ sid <- subset(all_surveys(), name == "ReTurk Survey")$id
 
 # Default: plain numeric data, codebook in the colmap.
 survey <- fetch_survey_plus(sid)
-head(survey$colmap)                       # qname, main, sub, value_labels
+head(survey$colmap)                       # oo, qname, main, sub, value_labels
+survey$colmap$oo[1]                        # column number of var 1 in $data
 survey$colmap$value_labels[1]             # "1=Strongly Disagree | 2=..."
 
 # Opt in to embedded haven value labels (e.g. for SPSS export):

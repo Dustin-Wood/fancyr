@@ -26,9 +26,10 @@
 #'     \item{\code{data}}{The survey data frame. Plain numeric by default;
 #'       \code{haven_labelled} value- and variable-label attributes are
 #'       attached only when \code{labelled = TRUE}.}
-#'     \item{\code{colmap}}{The enhanced column map, keeping only the
-#'       \code{qname}, \code{main}, \code{sub}, and \code{value_labels}
-#'       columns.}
+#'     \item{\code{colmap}}{The enhanced column map. Its first column,
+#'       \code{oo} ("original order"), records each variable's column position
+#'       in \code{data} (matched by \code{qname}); the remaining columns kept
+#'       are \code{qname}, \code{main}, \code{sub}, and \code{value_labels}.}
 #'   }
 #' @details
 #' Bundling the data and its codebook in one list keeps them together as a
@@ -56,7 +57,8 @@
 #'
 #' # Default: plain numeric data, codebook in the colmap.
 #' survey <- fetch_survey_plus(sid)
-#' head(survey$colmap)                       # qname, main, sub, value_labels
+#' head(survey$colmap)                       # oo, qname, main, sub, value_labels
+#' survey$colmap$oo[1]                        # column number of var 1 in $data
 #' survey$colmap$value_labels[1]             # "1=Strongly Disagree | 2=..."
 #'
 #' # Opt in to embedded haven value labels (e.g. for SPSS export):
@@ -79,6 +81,11 @@ fetch_survey_plus <- function(surveyID, labelled = FALSE, ...) {
   # identical whether or not value labels are attached to `survey`.
   colmap <- extract_colmapPlus(survey, surveyID, meta = meta)
   colmap <- colmap[c("qname", "main", "sub", "value_labels")]
+
+  # Record each variable's original column position in `data` (matched by
+  # qname), so the colmap can be used to undo sorting, reorder, or reference
+  # columns of `data` by number. Placed first for easy reading.
+  colmap <- cbind(oo = match(colmap$qname, names(survey)), colmap)
 
   # Embed haven value labels only on request; plain numeric is the default to
   # keep `data` interoperable with numeric-matrix consumers (see Details).
