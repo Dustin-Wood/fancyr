@@ -36,7 +36,10 @@ are supported and entered as dummy variables; their coefficients appear as
 \code{NA} in \code{$summary} since they don't reduce to a single slope.}
 
 \item{id_col}{Name of the participant ID column present in all supplied
-data frames. Defaults to \code{"id"}.}
+data frames. Defaults to \code{"id"}. Each frame must have one row per ID:
+rows are aligned with \code{match()}, which would take the first occurrence
+of a repeated ID and silently ignore the rest, so duplicates raise an error
+naming the offending IDs instead.}
 
 \item{zResid}{Logical. If \code{TRUE}, z-standardize each column of
 residuals (mean 0, SD 1 among non-missing rows). Defaults to \code{FALSE},

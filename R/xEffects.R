@@ -23,7 +23,11 @@
 #'   parallel mediators. Set to \code{NULL} (default) to fit a mediator-free
 #'   model, decomposing stability into confounded and residual paths only.
 #' @param id_col Name of the participant ID column present in all three data
-#'   frames. Defaults to \code{"id"}.
+#'   frames. Defaults to \code{"id"}. Each supplied data frame must have one row
+#'   per ID: because every join here is on \code{id_col}, and \code{merge()}
+#'   multiplies rows on a duplicated key rather than erroring, duplicate IDs
+#'   would silently inflate every sample size. Duplicates therefore raise an
+#'   error naming the offending IDs instead of being merged.
 #' @param date_col Name of a date/datetime column in \code{T1_data} and
 #'   \code{T2_data} used to compute the measurement interval. Set to
 #'   \code{NULL} (default) to skip interval calculation.
@@ -42,11 +46,18 @@
 #'   Defaults to \code{FALSE}.
 #'
 #' @return A named list with the following components:
-#' \item{retest_rs}{Retest correlation matrix for \code{commonitems} between T1 and T2.}
+#' \item{retest_rs}{Retest correlations for \code{commonitems} between T1 and
+#'   T2, from \code{\link[psych]{corr.test}} with \code{use = "pairwise"}. Each
+#'   correlation uses every case with both of its two variables observed, so
+#'   \code{retest_rs$n} is a matrix of per-pair sample sizes rather than a
+#'   single number.}
 #' \item{xEffects}{Output of \code{\link{allYstabilities}}: the long-format stability
 #'   path decomposition, per-item coefficients, sample sizes, and the per-item
-#'   per-item model results in \code{$modelEstimates}.}
-#' \item{measurementInterval}{Data frame of per-person measurement intervals in days, or \code{NULL} if \code{date_col} is not provided.}
+#'   model results in \code{$modelEstimates}.}
+#' \item{measurementInterval}{Data frame of per-person measurement intervals in
+#'   days, aligned row-for-row to the merged analysis sample, or \code{NULL} if
+#'   \code{date_col} is not provided. Anyone whose date is missing or unparseable
+#'   gets \code{NA} rather than being dropped.}
 #'
 #' @export
 #' @importFrom psych corr.test
@@ -58,6 +69,14 @@ xEffects <- function(T1_data, T2_data, commonitems, xFile = NULL, xVar = NULL,
   xVar <- if (is.null(xVar)) character(0) else as.character(xVar)
   if (length(xVar) && is.null(xFile))
     stop("`xFile` is required when `xVar` names one or more variables.")
+
+  # Every join below is on id_col, and merge() silently multiplies rows on a
+  # duplicated key. Refuse to run rather than return inflated sample sizes.
+  dup_why <- paste("Merging on a duplicated ID multiplies rows and silently",
+                   "inflates every sample size.")
+  checkUniqueIDs(T1_data, id_col, "T1_data", why = dup_why)
+  checkUniqueIDs(T2_data, id_col, "T2_data", why = dup_why)
+  if (length(xVar)) checkUniqueIDs(xFile, id_col, "xFile", why = dup_why)
 
   # Subset to id + common items (+ controls if provided) for T1
   T1_sub <- T1_data[, c(id_col, commonitems, controls), drop = FALSE]
@@ -80,11 +99,15 @@ xEffects <- function(T1_data, T2_data, commonitems, xFile = NULL, xVar = NULL,
   # Merge T1 and T2 by id
   merged <- merge(T1_sub, T2_sub, by = id_col)
 
-  # Compute retest correlations
+  # Compute retest correlations. Pairwise, not listwise: "complete.obs" would
+  # drop any case missing ANY item in the set, so the retest rs would be based
+  # on a smaller, differently-composed sample than the per-item models, which
+  # use FIML. Pairwise keeps each correlation on the cases that actually have
+  # its two variables.
   retest_rs <- psych::corr.test(
     merged[, item_cols_t1, drop = FALSE],
     merged[, item_cols_t2, drop = FALSE],
-    use = "complete.obs", method = "pearson", ci = FALSE
+    use = "pairwise", method = "pearson", ci = FALSE
   )
 
   # Merge experience variable(s), if any
@@ -102,21 +125,27 @@ xEffects <- function(T1_data, T2_data, commonitems, xFile = NULL, xVar = NULL,
     }
   }
 
-  # Compute measurement interval if date_col provided
+  # Compute measurement interval if date_col provided.
+  #
+  # Aligned to `merged` via match(), not built by a separate merge() of the two
+  # date frames: that would produce its own row set (anyone with dates but
+  # without complete item data, in its own sort order), so the intervals would
+  # not correspond row-for-row to the analysis sample. IDs are unique here --
+  # guarded above -- so match() is unambiguous.
   measurementInterval <- NULL
   if (!is.null(date_col)) {
-    dates_merged <- merge(T1_dates, T2_dates, by = id_col)
-    dates_merged$date_T1_parsed <- lubridate::parse_date_time(
-      dates_merged$date_T1, orders = c("mdy HM", "ymd HMS")
+    ids   <- merged[[id_col]]
+    raw1  <- T1_dates$date_T1[match(ids, T1_dates[[id_col]])]
+    raw2  <- T2_dates$date_T2[match(ids, T2_dates[[id_col]])]
+    date1 <- lubridate::parse_date_time(raw1, orders = c("mdy HM", "ymd HMS"))
+    date2 <- lubridate::parse_date_time(raw2, orders = c("mdy HM", "ymd HMS"))
+
+    measurementInterval <- data.frame(
+      ids,
+      interval_days = as.numeric(difftime(date2, date1, units = "days")),
+      stringsAsFactors = FALSE
     )
-    dates_merged$date_T2_parsed <- lubridate::parse_date_time(
-      dates_merged$date_T2, orders = c("mdy HM", "ymd HMS")
-    )
-    dates_merged$interval_days <- as.numeric(
-      difftime(dates_merged$date_T2_parsed, dates_merged$date_T1_parsed,
-               units = "days")
-    )
-    measurementInterval <- dates_merged[, c(id_col, "interval_days")]
+    names(measurementInterval)[1] <- id_col
   }
 
   # Run mediation analysis

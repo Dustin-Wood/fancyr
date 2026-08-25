@@ -52,6 +52,17 @@ All functions live in `R/` as individual files (one function per file, named to 
 
 Note: some functions call `library()` internally rather than relying on DESCRIPTION `Imports`. This is a known inconsistency; prefer using `::` namespacing or adding dependencies to DESCRIPTION when editing functions.
 
+### Joining on ID: `merge()` vs `match()`
+
+Both appear in the package. The split is deliberate, not drift:
+
+- **`match()`** when the output must stay aligned to a specific input frame. It preserves that frame's row order and length exactly, and fills `NA` for non-matches. `resChange()` needs this: `$residuals` has one row per row of `T2_data`, in the same order, so it can be `cbind()`-ed straight back.
+- **`merge()`** when assembling a new analysis frame where row identity doesn't survive anyway. `xEffects()` wants the T1∩T2 intersection and returns nothing row-aligned to an input.
+
+Two traps worth remembering. `merge()` re-sorts by the `by` column (`sort = TRUE` is the default) and drops non-matching rows unless `all.x = TRUE` — so its result row count tells you nothing on its own. And on a duplicated key it silently produces a Cartesian product rather than erroring, inflating every N.
+
+Because of that, **any function joining on an ID should call `checkUniqueIDs()`** (`R/utils-ids.R`) on each input first. It errors, naming the offending IDs, rather than letting duplicates through. Pass `why =` to describe what duplicates would do to that particular caller, since the consequence differs by join style.
+
 ### Documentation Pattern
 
 Each function file uses Roxygen2 headers. After any change to `@param`, `@return`, `@export`, `@examples`, or `@importFrom` tags, run `devtools::document()` to regenerate `NAMESPACE` and `man/`.

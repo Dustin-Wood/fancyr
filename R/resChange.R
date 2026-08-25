@@ -39,7 +39,10 @@
 #'   are supported and entered as dummy variables; their coefficients appear as
 #'   \code{NA} in \code{$summary} since they don't reduce to a single slope.
 #' @param id_col Name of the participant ID column present in all supplied
-#'   data frames. Defaults to \code{"id"}.
+#'   data frames. Defaults to \code{"id"}. Each frame must have one row per ID:
+#'   rows are aligned with \code{match()}, which would take the first occurrence
+#'   of a repeated ID and silently ignore the rest, so duplicates raise an error
+#'   naming the offending IDs instead.
 #' @param zResid Logical. If \code{TRUE}, z-standardize each column of
 #'   residuals (mean 0, SD 1 among non-missing rows). Defaults to \code{FALSE},
 #'   which leaves residuals on the T2 metric.
@@ -74,9 +77,13 @@ resChange <- function(T2_data, T1_data, cFile = NULL,
                       id_col = "id", zResid = FALSE) {
 
   # ── 1. Validate IDs and resolve variable/control sets ────────────────────────
+  # Rows are aligned by match(), which takes the first occurrence of a repeated
+  # ID and silently ignores the rest. Refuse to run instead: which row wins
+  # should be the caller's decision, not an accident of row order.
   for (nm in c("T2_data", "T1_data", if (!is.null(cFile)) "cFile")) {
-    if (!id_col %in% names(get(nm)))
-      stop("id_col '", id_col, "' not found in ", nm, ".")
+    checkUniqueIDs(get(nm), id_col, nm,
+                   why = paste("Only the first occurrence of a repeated ID",
+                               "would be used, silently discarding the rest."))
   }
   if (is.null(cFile) && !is.null(controls))
     stop("'controls' supplied without a cFile to take them from.")
@@ -111,17 +118,12 @@ resChange <- function(T2_data, T1_data, cFile = NULL,
   # ── 2. Match T1 and control rows to T2_data's rows (order-preserving) ────────
   ids <- T2_data[[id_col]]
 
-  match_file <- function(df, nm) {
-    if (anyDuplicated(df[[id_col]]))
-      warning("Duplicated IDs in ", nm, "; first occurrence used.")
-    match(ids, df[[id_col]])
-  }
-
-  t1_rows <- match_file(T1_data, "T1_data")
+  # IDs are unique in every frame (checked above), so match() is unambiguous.
+  t1_rows <- match(ids, T1_data[[id_col]])
   t1_vals <- T1_data[t1_rows, , drop = FALSE]
 
   c_vals <- if (!is.null(controls)) {
-    c_rows <- match_file(cFile, "cFile")
+    c_rows <- match(ids, cFile[[id_col]])
     out <- cFile[c_rows, controls, drop = FALSE]
     names(out) <- gsub("[^A-Za-z0-9_.]", "_", controls)  # lm-safe placeholder names
     out

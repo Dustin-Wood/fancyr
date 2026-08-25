@@ -36,7 +36,11 @@ parallel mediators. Set to \code{NULL} (default) to fit a mediator-free
 model, decomposing stability into confounded and residual paths only.}
 
 \item{id_col}{Name of the participant ID column present in all three data
-frames. Defaults to \code{"id"}.}
+frames. Defaults to \code{"id"}. Each supplied data frame must have one row
+per ID: because every join here is on \code{id_col}, and \code{merge()}
+multiplies rows on a duplicated key rather than erroring, duplicate IDs
+would silently inflate every sample size. Duplicates therefore raise an
+error naming the offending IDs instead of being merged.}
 
 \item{date_col}{Name of a date/datetime column in \code{T1_data} and
 \code{T2_data} used to compute the measurement interval. Set to
@@ -60,11 +64,18 @@ Defaults to \code{FALSE}.}
 }
 \value{
 A named list with the following components:
-\item{retest_rs}{Retest correlation matrix for \code{commonitems} between T1 and T2.}
+\item{retest_rs}{Retest correlations for \code{commonitems} between T1 and
+  T2, from \code{\link[psych]{corr.test}} with \code{use = "pairwise"}. Each
+  correlation uses every case with both of its two variables observed, so
+  \code{retest_rs$n} is a matrix of per-pair sample sizes rather than a
+  single number.}
 \item{xEffects}{Output of \code{\link{allYstabilities}}: the long-format stability
   path decomposition, per-item coefficients, sample sizes, and the per-item
-  per-item model results in \code{$modelEstimates}.}
-\item{measurementInterval}{Data frame of per-person measurement intervals in days, or \code{NULL} if \code{date_col} is not provided.}
+  model results in \code{$modelEstimates}.}
+\item{measurementInterval}{Data frame of per-person measurement intervals in
+  days, aligned row-for-row to the merged analysis sample, or \code{NULL} if
+  \code{date_col} is not provided. Anyone whose date is missing or unparseable
+  gets \code{NA} rather than being dropped.}
 }
 \description{
 Merges two-timepoint data, computes retest correlations for common items,
