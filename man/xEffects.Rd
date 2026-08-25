@@ -8,8 +8,8 @@ xEffects(
   T1_data,
   T2_data,
   commonitems,
-  xFile,
-  xVar,
+  xFile = NULL,
+  xVar = NULL,
   id_col = "id",
   date_col = NULL,
   controls = NULL,
@@ -27,10 +27,13 @@ all columns named in \code{commonitems}.}
 \item{commonitems}{Character vector of item base names present in both
 \code{T1_data} and \code{T2_data}.}
 
-\item{xFile}{Data frame containing the experience variable. Must include
-\code{id_col}.}
+\item{xFile}{Data frame containing the experience variable(s). Must include
+\code{id_col}. Optional; ignored when \code{xVar} is \code{NULL}.}
 
-\item{xVar}{Name of the experience variable column in \code{xFile}.}
+\item{xVar}{Character vector naming the experience variable column(s) in
+\code{xFile}. More than one may be given, in which case they are fitted as
+parallel mediators. Set to \code{NULL} (default) to fit a mediator-free
+model, decomposing stability into confounded and residual paths only.}
 
 \item{id_col}{Name of the participant ID column present in all three data
 frames. Defaults to \code{"id"}.}
@@ -41,28 +44,33 @@ frames. Defaults to \code{"id"}.}
 
 \item{controls}{Character vector of control variable column names in
 \code{T1_data}. When provided, these variables are carried through the
-merge and passed to \code{\link{medXonAllY}} as additional predictors of
-both X and Y2 in each item's model. Defaults to \code{NULL} (no controls).}
+merge and passed to \code{\link{allYstabilities}}, where each is linked to Y1 by
+an undirected covariance and enters as a predictor of Y2 and of every
+experience variable. Defaults to \code{NULL} (no controls).}
 
 \item{standardize}{Logical. If \code{TRUE}, z-standardize Y1, Y2, X, and
 all control variables before fitting models. Passed to
-\code{\link{medXonAllY}}. Defaults to \code{FALSE}.}
+\code{\link{allYstabilities}}. Defaults to \code{FALSE}.}
 
-\item{NA_to_0}{Logical. If \code{TRUE}, recode the experience variable so
+\item{NA_to_0}{Logical. If \code{TRUE}, recode each experience variable so
 that values equal to 1 remain 1 and all other values (including \code{NA})
-become 0. Useful when the variable encodes presence/absence of an
-experience. Defaults to \code{FALSE}.}
+become 0. Note this binarizes the variable, not merely fills its \code{NA}s.
+Useful when the variable encodes presence/absence of an experience.
+Defaults to \code{FALSE}.}
 }
 \value{
 A named list with the following components:
 \item{retest_rs}{Retest correlation matrix for \code{commonitems} between T1 and T2.}
-\item{xEffects}{Output of \code{\link{medXonAllY}}: selection, change, indirect, and residual stability effects.}
+\item{xEffects}{Output of \code{\link{allYstabilities}}: the long-format stability
+  path decomposition, per-item coefficients, sample sizes, and the per-item
+  per-item model results in \code{$modelEstimates}.}
 \item{measurementInterval}{Data frame of per-person measurement intervals in days, or \code{NULL} if \code{date_col} is not provided.}
 }
 \description{
 Merges two-timepoint data, computes retest correlations for common items,
-merges in an experience variable, and calls \code{\link{medXonAllY}} to
-estimate selection and change effects for each item.
+merges in the experience variable(s), and calls \code{\link{allYstabilities}} to
+decompose each item's T1-to-T2 stability into mediated, confounded, and
+residual pathways.
 
 T1 and T2 data frames must already have item names as column names. An
 \code{id_col} column present in both data frames is used for the merge.

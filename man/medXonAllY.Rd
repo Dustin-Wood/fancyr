@@ -2,68 +2,66 @@
 % Please edit documentation in R/medXonAllY.R
 \name{medXonAllY}
 \alias{medXonAllY}
-\title{Mediation of Experience (X) on Change in All Y Variables}
+\title{Stability Path Decomposition Across Many Y Variables (deprecated)}
 \usage{
 medXonAllY(
   data,
   items,
-  X,
+  X = NULL,
+  controls = NULL,
   y1ind = "[T1]",
   y2ind = "[T2]",
-  controls = NULL,
   standardize = FALSE,
+  missing = "fiml",
   return_estimates = TRUE
 )
 }
 \arguments{
-\item{data}{A data frame containing all variables. Item columns should have
-\code{y1ind} and \code{y2ind} suffixes (e.g., \code{"item[T1]"} and
+\item{data}{A data frame containing all variables. Item columns should carry
+the \code{y1ind} and \code{y2ind} suffixes (e.g. \code{"item[T1]"} and
 \code{"item[T2]"}).}
 
 \item{items}{Character vector of item base names (without T1/T2 suffixes).}
 
-\item{X}{Name of the experience variable column in \code{data}.}
+\item{X}{Character vector of mediator ("experience") variable names, or
+\code{NULL} (default) for a model with no mediators.}
+
+\item{controls}{Character vector of control variable names, linked to Y1 by
+undirected covariance. Defaults to \code{NULL}.}
 
 \item{y1ind}{Suffix identifying T1 item columns. Defaults to \code{"[T1]"}.}
 
 \item{y2ind}{Suffix identifying T2 item columns. Defaults to \code{"[T2]"}.}
 
-\item{controls}{Character vector of control variable column names in
-\code{data}. When provided, these variables are added as predictors of
-both X and Y2 in each item's model. Defaults to \code{NULL} (no controls).}
+\item{standardize}{Logical. If \code{TRUE}, z-standardize Y1, Y2, and all
+\code{X} and \code{controls} variables within each item's model. Makes
+pathway estimates comparable across items and controls. Defaults to
+\code{FALSE}.}
 
-\item{standardize}{Logical. If \code{TRUE}, z-standardize Y1, Y2, X, and
-all control variables before fitting models. Defaults to \code{FALSE}.}
+\item{missing}{Missing-data handling passed to \code{\link[lavaan]{sem}}.
+Defaults to \code{"fiml"}.}
 
 \item{return_estimates}{Logical. If \code{TRUE} (default), include the full
-\code{lavaan::parameterestimates()} output for every item as a named list
-in \code{$modelEstimates}.}
+per-item result in \code{$modelEstimates}. These are what
+\code{\link{plotMedX}} consumes.}
 }
 \value{
-A named list with the following components:
-\item{Y1onX_bX1}{Data frame of selection effects (Y1 -> X) for each item.}
-\item{XonY2_b2X}{Data frame of change effects (X -> Y2 | Y1) for each item.}
-\item{IndirectX_b2X1}{Data frame of indirect effects (Y1 -> X -> Y2) for each item.}
-\item{resStability_b21.X}{Data frame of residual stability (Y1 -> Y2 | X) for each item.}
-\item{controlEffects_Y2}{Data frame of control variable effects on Y2 for each item (NULL if no controls).}
-\item{controlEffects_X}{Data frame of control variable effects on X for each item (NULL if no controls).}
-\item{nobs}{Data frame of sample sizes for each item model.}
-\item{summary}{Wide data frame combining all effects for each item.}
-\item{modelEstimates}{Named list of full \code{parameterestimates()} data frames, one per item. NULL if \code{return_estimates = FALSE}.}
+The value of \code{\link{allYstabilities}}.
 }
 \description{
-For each item in \code{items}, fits a lavaan SEM to estimate the selection
-effect (Y1 predicts X), the change effect (X predicts Y2 controlling for Y1),
-and the indirect path from Y1 to Y2 through X (Y1 -> X -> Y2). Y1's direct
-effect on Y2 controlling for X is the residual stability.
-
-The model treats X as a mediator of longitudinal change: selection into
-experiences (bX1) and experience-driven change (b2X) combine to form an
-indirect effect (bX1 * b2X). This partitions the Y1-Y2 stability coefficient
-into a portion mediated by X and a residual direct path.
-
-Optionally, a set of control variables can be included as additional
-predictors of both X and Y2, partialling their effects from the focal
-selection and change coefficients. Their effects on Y2 and X are returned
-in dedicated list elements.
+\strong{Deprecated.} Use \code{\link{allYstabilities}} instead. The name was
+changed because the function no longer estimates "med X on all Y": mediators
+are optional, and what it returns is a decomposition of stability into
+mediated, confounded, and residual pathways.
+}
+\details{
+This alias forwards to \code{\link{allYstabilities}} and therefore returns the
+\strong{current long-format output}, not the wide format this function
+returned before. Code that read \code{$summary}, \code{$Y1onX_bX1},
+\code{$XonY2_b2X}, \code{$IndirectX_b2X1}, \code{$resStability_b21.X}, or
+\code{$controlEffects_*} must be rewritten against \code{$paths} and
+\code{$coefficients} regardless of which name it calls.
+}
+\seealso{
+\code{\link{allYstabilities}}
 }

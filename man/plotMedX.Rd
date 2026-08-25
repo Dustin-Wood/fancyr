@@ -2,10 +2,10 @@
 % Please edit documentation in R/plotMedX.R
 \name{plotMedX}
 \alias{plotMedX}
-\title{Plot a mediation path diagram from medXonAllY output}
+\title{Plot a stability path diagram from stabilityPaths output}
 \usage{
 plotMedX(
-  pe,
+  sp,
   item_label = NULL,
   x_label = NULL,
   control_labels = NULL,
@@ -17,24 +17,25 @@ plotMedX(
 )
 }
 \arguments{
-\item{pe}{A single \code{parameterestimates()} data frame from
+\item{sp}{A \code{\link{stabilityPaths}} result, e.g.
 \code{out$xEffects$modelEstimates[["item name"]]}.}
 
 \item{item_label}{Full display name for the item (shown below Y1 and Y2,
 since these are the same construct measured at two time points).
 Optional; if \code{NULL}, no label is drawn.}
 
-\item{x_label}{Full display name for the experience/predictor variable
-(shown above the X node). Optional; if \code{NULL}, no label is drawn.}
+\item{x_label}{Display name(s) for the mediator/experience variable(s), shown
+above the mediator nodes. Either a single string (when there is one
+mediator) or a character vector with one entry per mediator, in model
+order. Optional; if \code{NULL}, no labels are drawn.}
 
-\item{control_labels}{Character vector of display names for control variables,
-in the order they appear in \code{pe}. If \code{NULL} (default), sanitized
-variable names extracted from \code{pe} are used. Ignored when
-\code{show_controls = FALSE}.}
+\item{control_labels}{Character vector of display names for control
+variables, in model order. If \code{NULL} (default), the original variable
+names are used. Ignored when \code{show_controls = FALSE}.}
 
-\item{show_controls}{Logical. If \code{FALSE}, control variables, their paths,
-and their covariance arcs are left off the diagram, yielding a Y1 -> X -> Y2
-triangle. Default is \code{TRUE}.}
+\item{show_controls}{Logical. If \code{FALSE}, control variables, their
+paths, and their covariance arcs are left off the diagram. Default is
+\code{TRUE}.}
 
 \item{show_labels}{Logical. If \code{FALSE}, all text labels are omitted:
 path coefficients (and p-values), covariance coefficients, and the
@@ -56,18 +57,21 @@ Invisibly returns the \code{qgraph} object (which contains the
   final layout coordinates in \code{$layout}).
 }
 \description{
-Takes a single \code{parameterestimates()} data frame from \code{medXonAllY}
-(accessed via \code{xEffects$modelEstimates[["item name"]]}) and renders a
-standard mediation path diagram: X at top center, Y1 (baseline item score)
-at left, Y2 (follow-up item score) at right, and any control variables
-stacked below-left. Covariances (Y1 with controls, and between controls)
-are drawn as curved dashed double-headed arrows arcing out to the left.
-Full item and experience variable labels are placed outside the nodes.
+Takes a single \code{\link{stabilityPaths}} result (typically one element of
+\code{allYstabilities()$modelEstimates}) and renders a path diagram: mediators
+across the top, Y1 (baseline item score) at left, Y2 (follow-up item score)
+at right, and any control variables stacked below-left. Covariances are drawn
+as curved double-headed arrows -- Y1-with-control and control-with-control
+arcs bow out to the left, mediator-with-mediator arcs bow upward. Full
+variable labels are placed outside the nodes.
 
-Set \code{show_controls = FALSE} to omit control variables entirely, which
-reduces the diagram to a simple Y1 -> X -> Y2 triangle. Note that the
-remaining path coefficients are still the control-adjusted estimates from
-the fitted model; only their display is suppressed.
+The number of mediators is read from the fitted model, so single-mediator,
+multiple-mediator, and mediator-free diagrams are all drawn by the same call.
+
+Set \code{show_controls = FALSE} to omit control variables entirely, reducing
+the diagram to Y1, the mediators, and Y2. Note that the remaining path
+coefficients are still the control-adjusted estimates from the fitted model;
+only their display is suppressed.
 }
 \examples{
 \dontrun{
@@ -77,25 +81,24 @@ out <- xEffects(P25CB.4, F25CB.4,
                 xFile = LEADcourses,
                 id_col = "Random Id",
                 controls = c("genderNum", "SAT Math"),
-                zY = TRUE, zX = TRUE, NA_to_0 = TRUE)
+                standardize = TRUE, NA_to_0 = TRUE)
 
 item_name <- NL110.F25set[1]
 plotMedX(
-  pe             = out$xEffects$modelEstimates[[item_name]],
+  sp             = out$xEffects$modelEstimates[[item_name]],
   item_label     = item_name,
   x_label        = "NL110 Fall Course",
   control_labels = c("Gender", "SAT Math")
 )
 
-# Same model, but showing only the Y1 -> X -> Y2 triangle
-plotMedX(
-  pe            = out$xEffects$modelEstimates[[item_name]],
-  item_label    = item_name,
-  x_label       = "NL110 Fall Course",
-  show_controls = FALSE
-)
+# Same model, controls suppressed
+plotMedX(out$xEffects$modelEstimates[[item_name]],
+         item_label = item_name, show_controls = FALSE)
 
 # Bare structural diagram: no coefficients or variable names
-plotMedX(pe = out$xEffects$modelEstimates[[item_name]], show_labels = FALSE)
+plotMedX(out$xEffects$modelEstimates[[item_name]], show_labels = FALSE)
 }
+}
+\seealso{
+\code{\link{stabilityPaths}}, \code{\link{allYstabilities}}
 }

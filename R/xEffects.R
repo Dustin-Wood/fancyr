@@ -1,8 +1,9 @@
 #' Experience Effects on Longitudinal Change
 #' @description
 #' Merges two-timepoint data, computes retest correlations for common items,
-#' merges in an experience variable, and calls \code{\link{medXonAllY}} to
-#' estimate selection and change effects for each item.
+#' merges in the experience variable(s), and calls \code{\link{allYstabilities}} to
+#' decompose each item's T1-to-T2 stability into mediated, confounded, and
+#' residual pathways.
 #'
 #' T1 and T2 data frames must already have item names as column names. An
 #' \code{id_col} column present in both data frames is used for the merge.
@@ -15,9 +16,12 @@
 #'   all columns named in \code{commonitems}.
 #' @param commonitems Character vector of item base names present in both
 #'   \code{T1_data} and \code{T2_data}.
-#' @param xFile Data frame containing the experience variable. Must include
-#'   \code{id_col}.
-#' @param xVar Name of the experience variable column in \code{xFile}.
+#' @param xFile Data frame containing the experience variable(s). Must include
+#'   \code{id_col}. Optional; ignored when \code{xVar} is \code{NULL}.
+#' @param xVar Character vector naming the experience variable column(s) in
+#'   \code{xFile}. More than one may be given, in which case they are fitted as
+#'   parallel mediators. Set to \code{NULL} (default) to fit a mediator-free
+#'   model, decomposing stability into confounded and residual paths only.
 #' @param id_col Name of the participant ID column present in all three data
 #'   frames. Defaults to \code{"id"}.
 #' @param date_col Name of a date/datetime column in \code{T1_data} and
@@ -25,27 +29,35 @@
 #'   \code{NULL} (default) to skip interval calculation.
 #' @param standardize Logical. If \code{TRUE}, z-standardize Y1, Y2, X, and
 #'   all control variables before fitting models. Passed to
-#'   \code{\link{medXonAllY}}. Defaults to \code{FALSE}.
+#'   \code{\link{allYstabilities}}. Defaults to \code{FALSE}.
 #' @param controls Character vector of control variable column names in
 #'   \code{T1_data}. When provided, these variables are carried through the
-#'   merge and passed to \code{\link{medXonAllY}} as additional predictors of
-#'   both X and Y2 in each item's model. Defaults to \code{NULL} (no controls).
-#' @param NA_to_0 Logical. If \code{TRUE}, recode the experience variable so
+#'   merge and passed to \code{\link{allYstabilities}}, where each is linked to Y1 by
+#'   an undirected covariance and enters as a predictor of Y2 and of every
+#'   experience variable. Defaults to \code{NULL} (no controls).
+#' @param NA_to_0 Logical. If \code{TRUE}, recode each experience variable so
 #'   that values equal to 1 remain 1 and all other values (including \code{NA})
-#'   become 0. Useful when the variable encodes presence/absence of an
-#'   experience. Defaults to \code{FALSE}.
+#'   become 0. Note this binarizes the variable, not merely fills its \code{NA}s.
+#'   Useful when the variable encodes presence/absence of an experience.
+#'   Defaults to \code{FALSE}.
 #'
 #' @return A named list with the following components:
 #' \item{retest_rs}{Retest correlation matrix for \code{commonitems} between T1 and T2.}
-#' \item{xEffects}{Output of \code{\link{medXonAllY}}: selection, change, indirect, and residual stability effects.}
+#' \item{xEffects}{Output of \code{\link{allYstabilities}}: the long-format stability
+#'   path decomposition, per-item coefficients, sample sizes, and the per-item
+#'   per-item model results in \code{$modelEstimates}.}
 #' \item{measurementInterval}{Data frame of per-person measurement intervals in days, or \code{NULL} if \code{date_col} is not provided.}
 #'
 #' @export
 #' @importFrom psych corr.test
 #' @importFrom lubridate parse_date_time
-xEffects <- function(T1_data, T2_data, commonitems, xFile, xVar,
+xEffects <- function(T1_data, T2_data, commonitems, xFile = NULL, xVar = NULL,
                      id_col = "id", date_col = NULL, controls = NULL,
                      standardize = FALSE, NA_to_0 = FALSE) {
+
+  xVar <- if (is.null(xVar)) character(0) else as.character(xVar)
+  if (length(xVar) && is.null(xFile))
+    stop("`xFile` is required when `xVar` names one or more variables.")
 
   # Subset to id + common items (+ controls if provided) for T1
   T1_sub <- T1_data[, c(id_col, commonitems, controls), drop = FALSE]
@@ -75,13 +87,19 @@ xEffects <- function(T1_data, T2_data, commonitems, xFile, xVar,
     use = "complete.obs", method = "pearson", ci = FALSE
   )
 
-  # Merge experience variable
-  xFile_sub <- xFile[, c(id_col, xVar), drop = FALSE]
-  merged <- merge(merged, xFile_sub, by = id_col, all.x = TRUE)
+  # Merge experience variable(s), if any
+  if (length(xVar)) {
+    xmiss <- setdiff(c(id_col, xVar), names(xFile))
+    if (length(xmiss))
+      stop("Column(s) not found in `xFile`: ", paste(xmiss, collapse = ", "))
+    xFile_sub <- xFile[, c(id_col, xVar), drop = FALSE]
+    merged <- merge(merged, xFile_sub, by = id_col, all.x = TRUE)
 
-  # Optionally recode experience variable: 1 stays 1, everything else -> 0
-  if (NA_to_0) {
-    merged[[xVar]] <- ifelse(!is.na(merged[[xVar]]) & merged[[xVar]] == 1, 1, 0)
+    # Optionally recode each experience variable: 1 stays 1, everything else -> 0
+    if (NA_to_0) {
+      for (v in xVar)
+        merged[[v]] <- ifelse(!is.na(merged[[v]]) & merged[[v]] == 1, 1, 0)
+    }
   }
 
   # Compute measurement interval if date_col provided
@@ -102,10 +120,10 @@ xEffects <- function(T1_data, T2_data, commonitems, xFile, xVar,
   }
 
   # Run mediation analysis
-  xEff <- medXonAllY(
+  xEff <- allYstabilities(
     data        = merged,
     items       = commonitems,
-    X           = xVar,
+    X           = if (length(xVar)) xVar else NULL,
     controls    = controls,
     standardize = standardize
   )

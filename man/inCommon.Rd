@@ -19,5 +19,5 @@ A data frame with columns:
 \description{
 Identifies which items from \code{items1} are also present in \code{items2}.
 Useful for finding the common items across two survey administrations before
-passing them to \code{\link{xEffects}} or \code{\link{medXonAllY}}.
+passing them to \code{\link{xEffects}} or \code{\link{allYstabilities}}.
 }

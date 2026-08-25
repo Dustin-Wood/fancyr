@@ -2,7 +2,7 @@
 #' @description
 #' Identifies which items from \code{items1} are also present in \code{items2}.
 #' Useful for finding the common items across two survey administrations before
-#' passing them to \code{\link{xEffects}} or \code{\link{medXonAllY}}.
+#' passing them to \code{\link{xEffects}} or \code{\link{allYstabilities}}.
 #'
 #' @param items1 Character vector of item names from the first set (e.g., T1).
 #' @param items2 Character vector of item names from the second set (e.g., T2).
