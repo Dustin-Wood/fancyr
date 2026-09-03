@@ -52,8 +52,9 @@
 #'   \code{retest_rs$n} is a matrix of per-pair sample sizes rather than a
 #'   single number.}
 #' \item{xEffects}{Output of \code{\link{allYstabilities}}: the long-format stability
-#'   path decomposition, per-item coefficients, sample sizes, and the per-item
-#'   model results in \code{$modelEstimates}.}
+#'   path decomposition, per-item coefficients, sample sizes, the wide
+#'   one-row-per-item \code{$summary}, and the per-item model results in
+#'   \code{$modelEstimates}.}
 #' \item{measurementInterval}{Data frame of per-person measurement intervals in
 #'   days, aligned row-for-row to the merged analysis sample, or \code{NULL} if
 #'   \code{date_col} is not provided. Anyone whose date is missing or unparseable

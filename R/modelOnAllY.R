@@ -22,6 +22,19 @@
 #' what happened to each item, following the same convention as
 #' \code{\link{allICCs}}.
 #'
+#' \code{$summary} carries the same numbers in wide form, one row per item. Each
+#' extracted parameter contributes a column named after the spec's \code{path}
+#' annotation (or its lavaan label, if the spec declares no \code{path} column),
+#' and each structural coefficient a column named \code{lhs_on_rhs} for a
+#' regression or \code{lhs_with_rhs} for a covariance; every such column is
+#' followed by its \code{_p} partner. A sliding role appears in those names by
+#' its role name (\code{Y1}, \code{Y2}), since the column bound to it changes
+#' from item to item; a fixed variable appears under its own name. For a
+#' one-mediator stability model that gives \code{residual}, \code{via_<X>} and
+#' \code{total} from the decomposition, plus \code{<X>_on_Y1} (selection),
+#' \code{Y2_on_<X>} (change) and \code{Y2_on_Y1} (residual stability) from the
+#' structural coefficients.
+#'
 #' @param spec A \code{\link{fancyModel}} object.
 #' @param data A data frame containing the item columns and every column named
 #'   in \code{spec$vars}.
@@ -41,6 +54,11 @@
 #'   and \code{propTotal} when the spec defines a total.}
 #' \item{coefficients}{Long data frame of structural coefficients for every
 #'   item, labelled with the original variable names.}
+#' \item{summary}{Wide data frame, one row per item: \code{item}, \code{n},
+#'   \code{status}, then an estimate column and a \code{_p} column for every
+#'   extracted parameter and every structural coefficient. Same numbers as
+#'   \code{$paths} and \code{$coefficients}, pivoted for reading across items;
+#'   see Details for the column naming.}
 #' \item{totalStability}{Data frame of the total per item, if the spec defines
 #'   one; otherwise \code{NULL}.}
 #' \item{nobs}{Data frame of sample sizes per item.}
@@ -148,22 +166,96 @@ modelOnAllY <- function(spec, data, items,
     out
   } else NULL
 
+  nobs <- data.frame(
+    item = items,
+    n    = vapply(items, function(i) if (ok(fits[[i]])) as.integer(fits[[i]]$n)
+                                     else NA_integer_, integer(1), USE.NAMES = FALSE),
+    stringsAsFactors = FALSE)
+
+  status <- data.frame(
+    item   = items,
+    status = vapply(items, function(i) {
+               s <- fits[[i]]$status
+               if (is.null(s)) "Skipped: no result" else s
+             }, character(1), USE.NAMES = FALSE),
+    stringsAsFactors = FALSE)
+
+  ## ---- wide one-row-per-item summary --------------------------------------
+  # A convenience view: everything in $paths and $coefficients, pivoted so each
+  # item is a row and each quantity a pair of columns (estimate, `_p`). Nothing
+  # here is new information; it is the shape that reads well in a spreadsheet
+  # and that sorting/filtering across items wants.
+
+  # Extracted-parameter stems: the spec's `path` annotation when it has one,
+  # otherwise the lavaan label.
+  path_stems <- if ("path" %in% names(spec$extract)) as.character(spec$extract$path)
+                else spec$extract$label
+  path_stems <- make.unique(path_stems)
+
+  # Coefficient stems. A sliding role keeps its role name (Y1, Y2), since the
+  # column bound to it differs per item; a fixed role keeps its own variable
+  # name, which is constant across items. Either way the stem is stable, which
+  # is what lets one column mean the same thing down the whole table.
+  coef_stems <- function(cf, varmap) {
+    role <- varmap$internal[match(cf$lhs, varmap$original)]
+    lhs  <- ifelse(!is.na(role) & role %in% spec$slide, role, cf$lhs)
+    role <- varmap$internal[match(cf$rhs, varmap$original)]
+    rhs  <- ifelse(!is.na(role) & role %in% spec$slide, role, cf$rhs)
+    paste0(lhs, ifelse(cf$op == "~", "_on_", "_with_"), rhs)
+  }
+
+  ok_items  <- items[vapply(items, function(i) ok(fits[[i]]), logical(1))]
+  ref       <- if (length(ok_items)) fits[[ok_items[1]]] else NULL
+  coef_cols <- if (!is.null(ref) && !is.null(ref$coefficients) &&
+                   nrow(ref$coefficients))
+                 make.unique(coef_stems(ref$coefficients, ref$varmap))
+               else character(0)
+
+  blank <- function(nc, nms) matrix(NA_real_, length(items), nc,
+                                    dimnames = list(NULL, nms))
+  path_est <- blank(length(path_stems), path_stems)
+  path_p   <- path_est
+  coef_est <- blank(length(coef_cols), coef_cols)
+  coef_p   <- coef_est
+
+  for (i in seq_along(items)) {
+    r <- fits[[items[i]]]
+    if (!ok(r)) next
+    # $paths rows come back in spec$extract order for every item, including the
+    # NA scaffold, so position is a safe key here.
+    path_est[i, ] <- r$paths$est
+    path_p[i, ]   <- r$paths$pvalue
+    if (length(coef_cols) && !is.null(r$coefficients) && nrow(r$coefficients)) {
+      hit <- match(coef_cols, coef_stems(r$coefficients, r$varmap))
+      coef_est[i, ] <- r$coefficients$est[hit]
+      coef_p[i, ]   <- r$coefficients$pvalue[hit]
+    }
+  }
+
+  weave <- function(est, pv) {
+    if (!ncol(est)) return(NULL)
+    cols <- vector("list", 2L * ncol(est))
+    nms  <- character(2L * ncol(est))
+    for (j in seq_len(ncol(est))) {
+      cols[[2L * j - 1L]] <- est[, j]; nms[2L * j - 1L] <- colnames(est)[j]
+      cols[[2L * j]]      <- pv[, j];  nms[2L * j]      <- paste0(colnames(est)[j], "_p")
+    }
+    stats::setNames(as.data.frame(cols, stringsAsFactors = FALSE), nms)
+  }
+
+  summary_df <- data.frame(item = items, n = nobs$n, status = status$status,
+                           stringsAsFactors = FALSE)
+  for (blk in list(weave(path_est, path_p), weave(coef_est, coef_p)))
+    if (!is.null(blk)) summary_df <- cbind(summary_df, blk)
+  rownames(summary_df) <- NULL
+
   list(
     paths          = paths,
     coefficients   = coefficients,
+    summary        = summary_df,
     totalStability = totalStability,
-    nobs           = data.frame(
-      item = items,
-      n    = vapply(items, function(i) if (ok(fits[[i]])) as.integer(fits[[i]]$n)
-                                       else NA_integer_, integer(1), USE.NAMES = FALSE),
-      stringsAsFactors = FALSE),
-    status         = data.frame(
-      item   = items,
-      status = vapply(items, function(i) {
-                 s <- fits[[i]]$status
-                 if (is.null(s)) "Skipped: no result" else s
-               }, character(1), USE.NAMES = FALSE),
-      stringsAsFactors = FALSE),
+    nobs           = nobs,
+    status         = status,
     modelEstimates = if (return_estimates) fits else NULL
   )
 }

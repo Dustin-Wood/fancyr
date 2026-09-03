@@ -39,6 +39,11 @@ A named list with components:
   and \code{propTotal} when the spec defines a total.}
 \item{coefficients}{Long data frame of structural coefficients for every
   item, labelled with the original variable names.}
+\item{summary}{Wide data frame, one row per item: \code{item}, \code{n},
+  \code{status}, then an estimate column and a \code{_p} column for every
+  extracted parameter and every structural coefficient. Same numbers as
+  \code{$paths} and \code{$coefficients}, pivoted for reading across items;
+  see Details for the column naming.}
 \item{totalStability}{Data frame of the total per item, if the spec defines
   one; otherwise \code{NULL}.}
 \item{nobs}{Data frame of sample sizes per item.}
@@ -69,6 +74,19 @@ contribute \code{NA} rows rather than being dropped, so every returned data
 frame stays rectangular across items. The \code{$status} component records
 what happened to each item, following the same convention as
 \code{\link{allICCs}}.
+
+\code{$summary} carries the same numbers in wide form, one row per item. Each
+extracted parameter contributes a column named after the spec's \code{path}
+annotation (or its lavaan label, if the spec declares no \code{path} column),
+and each structural coefficient a column named \code{lhs_on_rhs} for a
+regression or \code{lhs_with_rhs} for a covariance; every such column is
+followed by its \code{_p} partner. A sliding role appears in those names by
+its role name (\code{Y1}, \code{Y2}), since the column bound to it changes
+from item to item; a fixed variable appears under its own name. For a
+one-mediator stability model that gives \code{residual}, \code{via_<X>} and
+\code{total} from the decomposition, plus \code{<X>_on_Y1} (selection),
+\code{Y2_on_<X>} (change) and \code{Y2_on_Y1} (residual stability) from the
+structural coefficients.
 }
 \examples{
 set.seed(1)

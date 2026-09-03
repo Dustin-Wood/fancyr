@@ -54,6 +54,12 @@
 #'   \code{"confounded"}, or \code{"total"}.}
 #' \item{coefficients}{Long data frame of the underlying structural
 #'   coefficients for every item, labelled with the original variable names.}
+#' \item{summary}{Wide data frame, one row per item, holding every pathway and
+#'   structural coefficient as an estimate/\code{_p} column pair alongside
+#'   \code{n} and \code{status}. For a one-mediator model the columns include
+#'   \code{residual}, \code{via_<X>}, \code{total}, \code{<X>_on_Y1}
+#'   (selection), \code{Y2_on_<X>} (change) and \code{Y2_on_Y1}. See
+#'   \code{\link{modelOnAllY}} for the naming rule.}
 #' \item{totalStability}{Data frame of the total stability coefficient per item.}
 #' \item{nobs}{Data frame of sample sizes per item.}
 #' \item{status}{Data frame recording \code{"Success"} or the reason each item
