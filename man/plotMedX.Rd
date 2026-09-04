@@ -10,38 +10,55 @@ plotMedX(
   x_label = NULL,
   control_labels = NULL,
   show_controls = TRUE,
-  show_labels = TRUE,
+  suppress_control_cov = FALSE,
+  show_estimates = TRUE,
+  label_cex = 1.05,
   digits = 2,
   show_pvalues = FALSE,
-  title = NULL
+  title = NULL,
+  show_labels = NULL
 )
 }
 \arguments{
 \item{sp}{A \code{\link{stabilityPaths}} result, e.g.
 \code{out$xEffects$modelEstimates[["item name"]]}.}
 
-\item{item_label}{Full display name for the item (shown below Y1 and Y2,
-since these are the same construct measured at two time points).
-Optional; if \code{NULL}, no label is drawn.}
+\item{item_label}{Display name for the item, written inside both the Y1 and
+the Y2 node, since these are the same construct measured at two time
+points. If \code{NULL} (default), each node shows its own column name
+(e.g. \code{"item[T1]"} and \code{"item[T2]"}).}
 
-\item{x_label}{Display name(s) for the mediator/experience variable(s), shown
-above the mediator nodes. Either a single string (when there is one
-mediator) or a character vector with one entry per mediator, in model
-order. Optional; if \code{NULL}, no labels are drawn.}
+\item{x_label}{Display name(s) for the mediator/experience variable(s),
+written inside the mediator nodes. Either a single string (when there is
+one mediator) or a character vector with one entry per mediator, in model
+order. If \code{NULL} (default), the original variable names are used.}
 
 \item{control_labels}{Character vector of display names for control
-variables, in model order. If \code{NULL} (default), the original variable
-names are used. Ignored when \code{show_controls = FALSE}.}
+variables, in model order, written inside the control nodes. If
+\code{NULL} (default), the original variable names are used. Ignored when
+\code{show_controls = FALSE}.}
 
 \item{show_controls}{Logical. If \code{FALSE}, control variables, their
 paths, and their covariance arcs are left off the diagram. Default is
 \code{TRUE}.}
 
-\item{show_labels}{Logical. If \code{FALSE}, all text labels are omitted:
-path coefficients (and p-values), covariance coefficients, and the
-\code{item_label}/\code{x_label}/\code{control_labels} variable names.
-Only the nodes, paths, and covariance arcs are drawn. Default is
-\code{TRUE}.}
+\item{suppress_control_cov}{Logical. If \code{TRUE}, every covariance arc
+that does not involve Y1 is left off: control-with-control, and
+mediator-with-mediator when there is more than one mediator. The
+Y1-with-control arcs are kept, since those are the confounding the
+decomposition is about. Nothing is re-estimated -- the remaining
+coefficients still come from the full model -- only the drawing is
+suppressed, which unclutters a diagram with several controls. Default is
+\code{FALSE}.}
+
+\item{show_estimates}{Logical. If \code{FALSE}, the numbers are omitted --
+path coefficients (and their p-values) and covariance coefficients --
+leaving the bare structure. The variable names inside the nodes are
+unaffected; those always draw. Default is \code{TRUE}.}
+
+\item{label_cex}{Numeric. Character expansion for the variable names written
+inside the nodes. Node boxes never resize, so lower this to fit a long
+name. Default is \code{1.05}.}
 
 \item{digits}{Integer. Number of decimal places for path coefficients.
 Default is \code{2}.}
@@ -51,6 +68,10 @@ parentheses to each edge label. Default is \code{FALSE}.}
 
 \item{title}{Optional character string passed to \code{qgraph}'s
 \code{title} argument.}
+
+\item{show_labels}{\strong{Deprecated.} Renamed to \code{show_estimates},
+which no longer governs the node labels. Passing it warns and is honoured
+as \code{show_estimates}.}
 }
 \value{
 Invisibly returns the \code{qgraph} object (which contains the
@@ -62,8 +83,14 @@ Takes a single \code{\link{stabilityPaths}} result (typically one element of
 across the top, Y1 (baseline item score) at left, Y2 (follow-up item score)
 at right, and any control variables stacked below-left. Covariances are drawn
 as curved double-headed arrows -- Y1-with-control and control-with-control
-arcs bow out to the left, mediator-with-mediator arcs bow upward. Full
-variable labels are placed outside the nodes.
+arcs bow out to the left, mediator-with-mediator arcs bow upward. Set
+\code{suppress_control_cov = TRUE} to keep only the arcs involving Y1.
+
+Each node is labelled at its centre with the variable's own name. The
+\code{Y1}/\code{Y2}/\code{X}/\code{C1} role placeholders are not drawn.
+Node boxes are a fixed size, so a name wider than its box overflows it rather
+than stretching it; pass a smaller \code{label_cex}, a shorter label, or one
+containing \code{"\\n"} to fit long names.
 
 The number of mediators is read from the fitted model, so single-mediator,
 multiple-mediator, and mediator-free diagrams are all drawn by the same call.
@@ -95,8 +122,12 @@ plotMedX(
 plotMedX(out$xEffects$modelEstimates[[item_name]],
          item_label = item_name, show_controls = FALSE)
 
-# Bare structural diagram: no coefficients or variable names
-plotMedX(out$xEffects$modelEstimates[[item_name]], show_labels = FALSE)
+# Controls kept, but only their covariance with Y1 is drawn
+plotMedX(out$xEffects$modelEstimates[[item_name]],
+         item_label = item_name, suppress_control_cov = TRUE)
+
+# Bare structure: variable names, but no coefficients
+plotMedX(out$xEffects$modelEstimates[[item_name]], show_estimates = FALSE)
 }
 }
 \seealso{

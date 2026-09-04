@@ -6,8 +6,14 @@
 #' across the top, Y1 (baseline item score) at left, Y2 (follow-up item score)
 #' at right, and any control variables stacked below-left. Covariances are drawn
 #' as curved double-headed arrows -- Y1-with-control and control-with-control
-#' arcs bow out to the left, mediator-with-mediator arcs bow upward. Full
-#' variable labels are placed outside the nodes.
+#' arcs bow out to the left, mediator-with-mediator arcs bow upward. Set
+#' \code{suppress_control_cov = TRUE} to keep only the arcs involving Y1.
+#'
+#' Each node is labelled at its centre with the variable's own name. The
+#' \code{Y1}/\code{Y2}/\code{X}/\code{C1} role placeholders are not drawn.
+#' Node boxes are a fixed size, so a name wider than its box overflows it rather
+#' than stretching it; pass a smaller \code{label_cex}, a shorter label, or one
+#' containing \code{"\\n"} to fit long names.
 #'
 #' The number of mediators is read from the fitted model, so single-mediator,
 #' multiple-mediator, and mediator-free diagrams are all drawn by the same call.
@@ -19,30 +25,45 @@
 #'
 #' @param sp A \code{\link{stabilityPaths}} result, e.g.
 #'   \code{out$xEffects$modelEstimates[["item name"]]}.
-#' @param item_label Full display name for the item (shown below Y1 and Y2,
-#'   since these are the same construct measured at two time points).
-#'   Optional; if \code{NULL}, no label is drawn.
-#' @param x_label Display name(s) for the mediator/experience variable(s), shown
-#'   above the mediator nodes. Either a single string (when there is one
-#'   mediator) or a character vector with one entry per mediator, in model
-#'   order. Optional; if \code{NULL}, no labels are drawn.
+#' @param item_label Display name for the item, written inside both the Y1 and
+#'   the Y2 node, since these are the same construct measured at two time
+#'   points. If \code{NULL} (default), each node shows its own column name
+#'   (e.g. \code{"item[T1]"} and \code{"item[T2]"}).
+#' @param x_label Display name(s) for the mediator/experience variable(s),
+#'   written inside the mediator nodes. Either a single string (when there is
+#'   one mediator) or a character vector with one entry per mediator, in model
+#'   order. If \code{NULL} (default), the original variable names are used.
 #' @param control_labels Character vector of display names for control
-#'   variables, in model order. If \code{NULL} (default), the original variable
-#'   names are used. Ignored when \code{show_controls = FALSE}.
+#'   variables, in model order, written inside the control nodes. If
+#'   \code{NULL} (default), the original variable names are used. Ignored when
+#'   \code{show_controls = FALSE}.
 #' @param show_controls Logical. If \code{FALSE}, control variables, their
 #'   paths, and their covariance arcs are left off the diagram. Default is
 #'   \code{TRUE}.
-#' @param show_labels Logical. If \code{FALSE}, all text labels are omitted:
-#'   path coefficients (and p-values), covariance coefficients, and the
-#'   \code{item_label}/\code{x_label}/\code{control_labels} variable names.
-#'   Only the nodes, paths, and covariance arcs are drawn. Default is
-#'   \code{TRUE}.
+#' @param suppress_control_cov Logical. If \code{TRUE}, every covariance arc
+#'   that does not involve Y1 is left off: control-with-control, and
+#'   mediator-with-mediator when there is more than one mediator. The
+#'   Y1-with-control arcs are kept, since those are the confounding the
+#'   decomposition is about. Nothing is re-estimated -- the remaining
+#'   coefficients still come from the full model -- only the drawing is
+#'   suppressed, which unclutters a diagram with several controls. Default is
+#'   \code{FALSE}.
+#' @param show_estimates Logical. If \code{FALSE}, the numbers are omitted --
+#'   path coefficients (and their p-values) and covariance coefficients --
+#'   leaving the bare structure. The variable names inside the nodes are
+#'   unaffected; those always draw. Default is \code{TRUE}.
+#' @param label_cex Numeric. Character expansion for the variable names written
+#'   inside the nodes. Node boxes never resize, so lower this to fit a long
+#'   name. Default is \code{1.05}.
 #' @param digits Integer. Number of decimal places for path coefficients.
 #'   Default is \code{2}.
 #' @param show_pvalues Logical. If \code{TRUE}, append the p-value in
 #'   parentheses to each edge label. Default is \code{FALSE}.
 #' @param title Optional character string passed to \code{qgraph}'s
 #'   \code{title} argument.
+#' @param show_labels \strong{Deprecated.} Renamed to \code{show_estimates},
+#'   which no longer governs the node labels. Passing it warns and is honoured
+#'   as \code{show_estimates}.
 #'
 #' @return Invisibly returns the \code{qgraph} object (which contains the
 #'   final layout coordinates in \code{$layout}).
@@ -74,16 +95,30 @@
 #' plotMedX(out$xEffects$modelEstimates[[item_name]],
 #'          item_label = item_name, show_controls = FALSE)
 #'
-#' # Bare structural diagram: no coefficients or variable names
-#' plotMedX(out$xEffects$modelEstimates[[item_name]], show_labels = FALSE)
+#' # Controls kept, but only their covariance with Y1 is drawn
+#' plotMedX(out$xEffects$modelEstimates[[item_name]],
+#'          item_label = item_name, suppress_control_cov = TRUE)
+#'
+#' # Bare structure: variable names, but no coefficients
+#' plotMedX(out$xEffects$modelEstimates[[item_name]], show_estimates = FALSE)
 #' }
 plotMedX <- function(sp, item_label = NULL, x_label = NULL,
                      control_labels = NULL,
                      show_controls = TRUE,
-                     show_labels = TRUE,
+                     suppress_control_cov = FALSE,
+                     show_estimates = TRUE,
+                     label_cex = 1.05,
                      digits = 2,
                      show_pvalues = FALSE,
-                     title = NULL) {
+                     title = NULL,
+                     show_labels = NULL) {
+
+  if (!is.null(show_labels)) {
+    warning("`show_labels` is deprecated; use `show_estimates` instead. ",
+            "It now controls only the coefficients on the paths and arcs -- ",
+            "the variable names inside the nodes always draw.", call. = FALSE)
+    show_estimates <- isTRUE(show_labels)
+  }
 
   # ── 1. Unpack the fitted model ──────────────────────────────────────────────
   if (is.data.frame(sp))
@@ -115,9 +150,16 @@ plotMedX <- function(sp, item_label = NULL, x_label = NULL,
     }
     lbls
   }
+  # Nodes carry the variable names themselves, so an unsupplied label falls back
+  # to the column name rather than to a role placeholder -- a blank node would
+  # otherwise be all that is left.
   control_labels <- check_labels(control_labels, n_ctrl, "control_labels")
   if (is.null(control_labels)) control_labels <- ctrl_names
   x_label <- check_labels(x_label, n_med, "x_label")
+  if (is.null(x_label)) x_label <- med_names
+  item_label <- check_labels(item_label, 1, "item_label")
+  y1_disp <- if (is.null(item_label)) y1_name else item_label
+  y2_disp <- if (is.null(item_label)) y2_name else item_label
 
   # ── 2. Extract path and covariance estimates ─────────────────────────────────
   cf <- sp$coefficients
@@ -168,11 +210,10 @@ plotMedX <- function(sp, item_label = NULL, x_label = NULL,
   n_nodes    <- length(node_names)
   idx        <- setNames(seq_along(node_names), node_names)
 
-  # guard: paste0("C", seq_len(0)) yields "C", not character(0)
-  med_disp  <- if (n_med == 0) character(0)
-               else if (n_med == 1) "X" else paste0("X", seq_len(n_med))
-  ctrl_disp <- if (n_ctrl > 0) paste0("C", seq_len(n_ctrl)) else character(0)
-  node_labels <- c("Y1", med_disp, "Y2", ctrl_disp)
+  # qgraph draws the boxes empty; the variable names are written at node centre
+  # in step 9 with text(). Handing qgraph blank labels is what keeps every box
+  # exactly node.width by node.height regardless of how long a name is.
+  node_labels <- rep("", n_nodes)
 
   # ── 5. Regression-only edge list (covariances drawn manually later) ───────────
   make_edge <- function(from_name, to_name, path_info) {
@@ -219,14 +260,16 @@ plotMedX <- function(sp, item_label = NULL, x_label = NULL,
     layout         = layout_mat,
     labels         = node_labels,
     shape          = "rectangle",
-    edge.labels    = if (show_labels) elabels else FALSE,
+    edge.labels    = if (show_estimates) elabels else FALSE,
     edge.label.cex = 0.85,
     node.width     = 0.9,
     node.height    = 0.55,
-    # extra margin only on the sides where covariance arcs need room to bow out
+    # extra margin only on the sides where covariance arcs need room to bow out.
+    # The Y1-with-control arcs on the left survive suppression; the upward
+    # mediator-with-mediator arcs do not, so that headroom is reclaimed.
     mar            = c(6,
                        if (n_ctrl > 0) 10 else 6,
-                       if (n_med  > 1) 10 else 6,
+                       if (n_med > 1 && !suppress_control_cov) 10 else 6,
                        6),
     title          = title,
     DoNotPlot      = FALSE
@@ -316,7 +359,7 @@ plotMedX <- function(sp, item_label = NULL, x_label = NULL,
     arrows(bx[193], by[193], bx[200], by[200], length = 0.08,
            angle = 20, code = 2, lwd = edge_lwd, col = edge_col)
 
-    lbl <- if (show_labels) fmt(path_info) else ""
+    lbl <- if (show_estimates) fmt(path_info) else ""
     if (nchar(lbl) > 0) {
       if (dir == "left")
         text(bx[100] - 0.05, by[100], lbl, cex = elab_cex, col = elab_col,
@@ -330,41 +373,42 @@ plotMedX <- function(sp, item_label = NULL, x_label = NULL,
   for (i in seq_along(ctrl_names))
     draw_cov_arc(y1_name, ctrl_names[i], y1_ctrl_cov[[i]], dir = "left")
 
-  for (p in seq_along(ctrl_pairs)) {
-    pr <- ctrl_pairs[[p]]
-    draw_cov_arc(ctrl_names[pr[1]], ctrl_names[pr[2]], ctrl_pair_cov[[p]],
-                 dir = "left")
+  # Everything above involves Y1 and is part of the stability decomposition.
+  # What follows -- control-with-control, mediator-with-mediator -- is estimated
+  # but decomposes nothing, so it is the first thing to drop when the diagram
+  # gets crowded.
+  if (!suppress_control_cov) {
+    for (p in seq_along(ctrl_pairs)) {
+      pr <- ctrl_pairs[[p]]
+      draw_cov_arc(ctrl_names[pr[1]], ctrl_names[pr[2]], ctrl_pair_cov[[p]],
+                   dir = "left")
+    }
+
+    for (p in seq_along(med_pairs)) {
+      pr <- med_pairs[[p]]
+      draw_cov_arc(med_names[pr[1]], med_names[pr[2]], med_pair_cov[[p]],
+                   dir = "up")
+    }
   }
 
-  for (p in seq_along(med_pairs)) {
-    pr <- med_pairs[[p]]
-    draw_cov_arc(med_names[pr[1]], med_names[pr[2]], med_pair_cov[[p]],
-                 dir = "up")
-  }
-
-  # ── 9. Add full text labels outside nodes ────────────────────────────────────
-  add_label <- function(node_name, label, y_offset, adj_x = 0.5,
-                        font = 1, cex = 1.05) {
+  # ── 9. Write variable names at node centres ─────────────────────────────────
+  # Drawn over the boxes qgraph already laid down, so a name longer than its box
+  # overflows it rather than resizing it. Use `label_cex` to shrink text to fit.
+  add_label <- function(node_name, label, font = 1) {
     ri <- which(node_names == node_name)
     text(x      = lyt[ri, 1],
-         y      = lyt[ri, 2] + y_offset,
+         y      = lyt[ri, 2],
          labels = label,
-         adj    = c(adj_x, if (y_offset > 0) 0 else 1),
+         adj    = c(0.5, 0.5),
          font   = font,
-         cex    = cex)
+         cex    = label_cex)
   }
 
-  if (show_labels) {
-    if (!is.null(x_label))
-      for (j in seq_len(n_med))
-        add_label(med_names[j], x_label[j], y_offset = 0.18, font = 3)
-    if (!is.null(item_label)) {
-      add_label(y1_name, item_label, y_offset = -0.18)
-      add_label(y2_name, item_label, y_offset = -0.18)
-    }
-    for (i in seq_len(n_ctrl))
-      add_label(ctrl_names[i], control_labels[i], y_offset = -0.18)
-  }
+  # Always drawn: a box with no name in it is not a diagram of anything.
+  for (j in seq_len(n_med)) add_label(med_names[j], x_label[j], font = 3)
+  add_label(y1_name, y1_disp)
+  add_label(y2_name, y2_disp)
+  for (i in seq_len(n_ctrl)) add_label(ctrl_names[i], control_labels[i])
 
   invisible(q)
 }
