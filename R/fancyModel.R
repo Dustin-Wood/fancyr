@@ -44,7 +44,7 @@
 #' @param roles Optional named character vector giving each role a semantic
 #'   label to record in \code{fitModel}'s \code{$varmap}, e.g.
 #'   \code{c(X1 = "mediator", C1 = "control")}. Downstream consumers such as
-#'   \code{\link{plotMedX}} use these labels to decide how to draw each
+#'   the \code{\link{stabilityPaths}} plot method use these labels to decide how to draw each
 #'   variable. Roles not listed fall back to \code{"slide"} or \code{"fixed"}.
 #' @param sem_args List of extra arguments passed to \code{\link[lavaan]{sem}},
 #'   e.g. \code{list(missing = "fiml", fixed.x = FALSE)}. Defaults to those two.

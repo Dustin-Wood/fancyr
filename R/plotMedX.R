@@ -1,107 +1,12 @@
-#' Plot a stability path diagram from stabilityPaths output
-#'
-#' @description
-#' Takes a single \code{\link{stabilityPaths}} result (typically one element of
-#' \code{allYstabilities()$modelEstimates}) and renders a path diagram: mediators
-#' across the top, Y1 (baseline item score) at left, Y2 (follow-up item score)
-#' at right, and any control variables stacked below-left. Covariances are drawn
-#' as curved double-headed arrows -- Y1-with-control and control-with-control
-#' arcs bow out to the left, mediator-with-mediator arcs bow upward. Set
-#' \code{suppress_control_cov = TRUE} to keep only the arcs involving Y1.
-#'
-#' Each node is labelled at its centre with the variable's own name. The
-#' \code{Y1}/\code{Y2}/\code{X}/\code{C1} role placeholders are not drawn.
-#' Node boxes are a fixed size, so a name wider than its box overflows it rather
-#' than stretching it; pass a smaller \code{label_cex}, a shorter label, or one
-#' containing \code{"\\n"} to fit long names.
-#'
-#' The number of mediators is read from the fitted model, so single-mediator,
-#' multiple-mediator, and mediator-free diagrams are all drawn by the same call.
-#'
-#' Set \code{show_controls = FALSE} to omit control variables entirely, reducing
-#' the diagram to Y1, the mediators, and Y2. Note that the remaining path
-#' coefficients are still the control-adjusted estimates from the fitted model;
-#' only their display is suppressed.
-#'
-#' @param sp A \code{\link{stabilityPaths}} result, e.g.
-#'   \code{out$xEffects$modelEstimates[["item name"]]}.
-#' @param item_label Display name for the item, written inside both the Y1 and
-#'   the Y2 node, since these are the same construct measured at two time
-#'   points. If \code{NULL} (default), each node shows its own column name
-#'   (e.g. \code{"item[T1]"} and \code{"item[T2]"}).
-#' @param x_label Display name(s) for the mediator/experience variable(s),
-#'   written inside the mediator nodes. Either a single string (when there is
-#'   one mediator) or a character vector with one entry per mediator, in model
-#'   order. If \code{NULL} (default), the original variable names are used.
-#' @param control_labels Character vector of display names for control
-#'   variables, in model order, written inside the control nodes. If
-#'   \code{NULL} (default), the original variable names are used. Ignored when
-#'   \code{show_controls = FALSE}.
-#' @param show_controls Logical. If \code{FALSE}, control variables, their
-#'   paths, and their covariance arcs are left off the diagram. Default is
-#'   \code{TRUE}.
-#' @param suppress_control_cov Logical. If \code{TRUE}, every covariance arc
-#'   that does not involve Y1 is left off: control-with-control, and
-#'   mediator-with-mediator when there is more than one mediator. The
-#'   Y1-with-control arcs are kept, since those are the confounding the
-#'   decomposition is about. Nothing is re-estimated -- the remaining
-#'   coefficients still come from the full model -- only the drawing is
-#'   suppressed, which unclutters a diagram with several controls. Default is
-#'   \code{FALSE}.
-#' @param show_estimates Logical. If \code{FALSE}, the numbers are omitted --
-#'   path coefficients (and their p-values) and covariance coefficients --
-#'   leaving the bare structure. The variable names inside the nodes are
-#'   unaffected; those always draw. Default is \code{TRUE}.
-#' @param label_cex Numeric. Character expansion for the variable names written
-#'   inside the nodes. Node boxes never resize, so lower this to fit a long
-#'   name. Default is \code{1.05}.
-#' @param digits Integer. Number of decimal places for path coefficients.
-#'   Default is \code{2}.
-#' @param show_pvalues Logical. If \code{TRUE}, append the p-value in
-#'   parentheses to each edge label. Default is \code{FALSE}.
-#' @param title Optional character string passed to \code{qgraph}'s
-#'   \code{title} argument.
-#' @param show_labels \strong{Deprecated.} Renamed to \code{show_estimates},
-#'   which no longer governs the node labels. Passing it warns and is honoured
-#'   as \code{show_estimates}.
-#'
-#' @return Invisibly returns the \code{qgraph} object (which contains the
-#'   final layout coordinates in \code{$layout}).
-#'
-#' @seealso \code{\link{stabilityPaths}}, \code{\link{allYstabilities}}
-#'
-#' @export
-#' @importFrom qgraph qgraph
-#'
-#' @examples
-#' \dontrun{
-#' out <- xEffects(P25CB.4, F25CB.4,
-#'                 commonitems = NL110.F25set,
-#'                 xVar = "NL110fall",
-#'                 xFile = LEADcourses,
-#'                 id_col = "Random Id",
-#'                 controls = c("genderNum", "SAT Math"),
-#'                 standardize = TRUE, NA_to_0 = TRUE)
-#'
-#' item_name <- NL110.F25set[1]
-#' plotMedX(
-#'   sp             = out$xEffects$modelEstimates[[item_name]],
-#'   item_label     = item_name,
-#'   x_label        = "NL110 Fall Course",
-#'   control_labels = c("Gender", "SAT Math")
-#' )
-#'
-#' # Same model, controls suppressed
-#' plotMedX(out$xEffects$modelEstimates[[item_name]],
-#'          item_label = item_name, show_controls = FALSE)
-#'
-#' # Controls kept, but only their covariance with Y1 is drawn
-#' plotMedX(out$xEffects$modelEstimates[[item_name]],
-#'          item_label = item_name, suppress_control_cov = TRUE)
-#'
-#' # Bare structure: variable names, but no coefficients
-#' plotMedX(out$xEffects$modelEstimates[[item_name]], show_estimates = FALSE)
-#' }
+# Draw one item's stability path diagram (internal; reached via
+# plot.fancyStability(x, item = ...), which documents the arguments).
+#
+# Mediators sit across the top, Y1 at left, Y2 at right, and controls stack
+# below-left. Covariances are curved double-headed arrows: Y1-with-control and
+# control-with-control arcs bow out to the left, mediator-with-mediator arcs bow
+# upward. Variables modelled as latent (a reliability was supplied) are drawn as
+# ellipses, with their reliability noted under the name. `sp` is one element of
+# a fancyStability object's $fits, i.e. a fitModel() result.
 plotMedX <- function(sp, item_label = NULL, x_label = NULL,
                      control_labels = NULL,
                      show_controls = TRUE,
@@ -110,27 +15,18 @@ plotMedX <- function(sp, item_label = NULL, x_label = NULL,
                      label_cex = 1.05,
                      digits = 2,
                      show_pvalues = FALSE,
-                     title = NULL,
-                     show_labels = NULL) {
-
-  if (!is.null(show_labels)) {
-    warning("`show_labels` is deprecated; use `show_estimates` instead. ",
-            "It now controls only the coefficients on the paths and arcs -- ",
-            "the variable names inside the nodes always draw.", call. = FALSE)
-    show_estimates <- isTRUE(show_labels)
-  }
+                     title = NULL) {
 
   # ── 1. Unpack the fitted model ──────────────────────────────────────────────
-  if (is.data.frame(sp))
-    stop("`sp` looks like a lavaan parameterestimates() data frame. ",
-         "plotMedX() now takes a stabilityPaths() result, e.g. ",
-         "allYstabilities(...)$modelEstimates[[item]].")
   if (!is.list(sp) || is.null(sp$varmap) || is.null(sp$coefficients))
-    stop("`sp` must be a stabilityPaths() result (with $varmap and $coefficients).")
+    stop("`sp` must be a fitModel() result (with $varmap and $coefficients).")
   if (!isTRUE(sp$converged))
     stop("This model did not converge; there is nothing to plot.")
 
   vm      <- sp$varmap
+  rel_of  <- if ("reliability" %in% names(vm))
+    stats::setNames(vm$reliability, vm$original) else
+    stats::setNames(rep(NA_real_, nrow(vm)), vm$original)
   y1_name <- vm$original[vm$role == "Y1"]
   y2_name <- vm$original[vm$role == "Y2"]
   med_names  <- vm$original[vm$role == "mediator"]
@@ -259,7 +155,8 @@ plotMedX <- function(sp, item_label = NULL, x_label = NULL,
     directed       = TRUE,
     layout         = layout_mat,
     labels         = node_labels,
-    shape          = "rectangle",
+    # SEM convention: observed variables are boxes, latent ones ellipses
+    shape          = ifelse(is.na(rel_of[node_names]), "rectangle", "ellipse"),
     edge.labels    = if (show_estimates) elabels else FALSE,
     edge.label.cex = 0.85,
     node.width     = 0.9,
@@ -395,13 +292,20 @@ plotMedX <- function(sp, item_label = NULL, x_label = NULL,
   # Drawn over the boxes qgraph already laid down, so a name longer than its box
   # overflows it rather than resizing it. Use `label_cex` to shrink text to fit.
   add_label <- function(node_name, label, font = 1) {
-    ri <- which(node_names == node_name)
+    ri  <- which(node_names == node_name)
+    rel <- rel_of[[node_name]]
+    # a latent node carries its assumed reliability just under its name
+    y_off <- if (is.na(rel)) 0 else 0.025
     text(x      = lyt[ri, 1],
-         y      = lyt[ri, 2],
+         y      = lyt[ri, 2] + y_off,
          labels = label,
          adj    = c(0.5, 0.5),
          font   = font,
          cex    = label_cex)
+    if (!is.na(rel))
+      text(x = lyt[ri, 1], y = lyt[ri, 2] - 0.045,
+           labels = sprintf("rel = %.2f", rel),
+           adj = c(0.5, 0.5), cex = label_cex * 0.7, col = "grey30")
   }
 
   # Always drawn: a box with no name in it is not a diagram of anything.

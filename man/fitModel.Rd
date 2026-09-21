@@ -4,7 +4,14 @@
 \alias{fitModel}
 \title{Fit a fancyModel Specification to One Set of Variables}
 \usage{
-fitModel(spec, data, bind, standardize = FALSE, return_fit = FALSE)
+fitModel(
+  spec,
+  data,
+  bind,
+  reliability = NULL,
+  metric = c("raw", "std"),
+  return_fit = FALSE
+)
 }
 \arguments{
 \item{spec}{A \code{\link{fancyModel}} object.}
@@ -16,8 +23,17 @@ fitModel(spec, data, bind, standardize = FALSE, return_fit = FALSE)
 columns, e.g. \code{c(Y1 = "item[T1]", Y2 = "item[T2]")}. Every role in
 \code{spec$slide} must be present.}
 
-\item{standardize}{Logical. If \code{TRUE}, z-standardize every bound column
-before fitting. Defaults to \code{FALSE}.}
+\item{reliability}{Optional named numeric vector giving a reliability for any
+role, sliding or fixed, e.g. \code{c(Y1 = .7, Y2 = .7, C1 = .9)}. Each role
+named with a value below 1 is modelled as a latent variable (see the
+section below). Values of 1 or \code{NA} leave the role observed.
+Defaults to \code{NULL} (every role observed).}
+
+\item{metric}{\code{"raw"} (default) reports estimates in the variables' own
+units; \code{"std"} reports fully standardized estimates
+(\code{\link[lavaan]{standardizedSolution}}, \code{type = "std.all"}), with
+delta-method standard errors. With latent roles, \code{"std"} standardizes
+the latent variables, so correlations are disattenuated.}
 
 \item{return_fit}{Logical. If \code{TRUE}, include the fitted lavaan object
 in \code{$fit}. Defaults to \code{FALSE}.}
@@ -26,23 +42,31 @@ in \code{$fit}. Defaults to \code{FALSE}.}
 A named list with components:
 \item{paths}{Data frame of the extracted parameters, carrying any annotation
   columns declared in \code{spec$extract}, plus \code{est}, \code{se},
-  \code{pvalue}, \code{ci.lower}, \code{ci.upper}. A \code{propTotal} column
-  is added when the spec extracts a row of type \code{"total"}.}
+  \code{pvalue}, \code{ci.lower}, \code{ci.upper}. A \code{share} column
+  (each estimate divided by the total) is added when the spec extracts a row
+  of type \code{"total"}.}
 \item{coefficients}{Data frame of all structural coefficients
-  (\code{~} and off-diagonal \code{~~}), labelled with original names.}
-\item{totalStability}{The \code{"total"} estimate if the spec defines one,
-  otherwise \code{NA}.}
+  (\code{~} and off-diagonal \code{~~}), labelled with original names, in
+  the requested metric.}
+\item{total}{The \code{"total"} estimate if the spec defines one, otherwise
+  \code{NA}.}
 \item{n}{Number of observations used.}
 \item{converged}{Logical.}
-\item{status}{\code{"Success"}, or a short description of the failure.}
-\item{syntax}{The model syntax that was fitted.}
-\item{varmap}{Data frame mapping role names to original columns.}
+\item{admissible}{Logical: \code{FALSE} if the solution has negative
+  variances or a standardized total outside [-1, 1].}
+\item{status}{\code{"Success"}, or a short description of the problem.}
+\item{metric}{The metric used.}
+\item{syntax}{The model syntax that was fitted, including any measurement
+  lines added for latent roles.}
+\item{varmap}{Data frame mapping role names to original columns, with each
+  role's semantic label and reliability (\code{NA} when observed).}
 \item{fit}{The lavaan fit object, if \code{return_fit = TRUE}.}
 }
 \description{
 Binds columns to the roles named in a \code{\link{fancyModel}} spec, fits the
 model with \code{\link[lavaan]{sem}}, and returns tidy output labelled with
-the original variable names.
+the original variable names. Any role can optionally be modelled as a latent
+variable measured by its column with a known reliability.
 }
 \details{
 Columns are copied into a working frame and renamed to their role names
@@ -54,6 +78,49 @@ output, so \code{$coefficients} refers to your columns, not to roles.
 A model that errors or fails to converge does not stop the caller: the
 function returns the same list shape with \code{NA} estimates and
 \code{converged = FALSE}, and \code{$status} explains what happened.
+}
+\section{Correcting for unreliability}{
+
+Supplying \code{reliability = c(Y1 = .7)} turns role \code{Y1} into a latent
+variable with its observed column as the single indicator:
+
+\preformatted{  Y1     =~ 1*Y1_obs
+  Y1_obs ~~ e*Y1_obs      # e = (1 - rel) * var(Y1_obs), fixed}
+
+The model syntax in the spec is untouched -- the role name simply now refers
+to the latent variable -- so every structural path is estimated between
+error-free constructs. Because one free observed variance is exchanged for
+one free latent variance, a just-identified model stays just-identified, and
+any decomposition defined in the spec still sums exactly.
+
+Fixing the error variance (rather than fixing the loading at
+\eqn{\sqrt{rel}} with a unit latent variance) gives identical standardized
+results, but also works for an endogenous role such as \code{Y2}, whose
+variance is not a free parameter, and keeps raw-metric estimates in the
+column's own units. The error variance uses the column's variance among its
+observed cases.
+
+Two caveats. Standard errors treat the reliability as known, so they are
+somewhat optimistic; see \code{\link{reliabilitySensitivity}} for how much the
+results depend on the value assumed. And a reliability lower than the
+variable's correlations with other variables imply can produce an
+inadmissible solution (e.g. a latent correlation above 1, or a negative
+residual variance). Such fits are returned with their estimates, but with
+\code{admissible = FALSE} and an explanatory \code{status}.
+}
+
+\examples{
+spec <- stabilityModel(X = "leader", controls = "ses")
+d <- stabilityData(stabilitySim$T1, stabilitySim$T2, stabilitySim$experience,
+                   fill = list(leader = 0))
+bind <- c(Y1 = "dominant[T1]", Y2 = "dominant[T2]")
+
+# observed variables
+fitModel(spec, d, bind, metric = "std")$paths
+
+# the same model with Y1 and Y2 corrected for unreliability
+fitModel(spec, d, bind, reliability = c(Y1 = .7, Y2 = .7), metric = "std")$paths
+
 }
 \seealso{
 \code{\link{fancyModel}}, \code{\link{modelOnAllY}},
