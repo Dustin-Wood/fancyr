@@ -41,6 +41,8 @@ All functions live in `R/` as individual files (one function per file, named to 
 
 **Dimensionality:** `nFK()` (number of orthogonal factors in a set — active development), `nPCX()` (number of independent PCA dimensions), `qrrSplithalf()` (split-half reliability)
 
+**Stability decomposition (two-wave):** `stabilityData()` (merge waves + experience files) → `stabilityPaths()` (mediated / confounded / residual stability per item, optional latent `reliability` correction; returns a `fancyStability` object with print/summary/plot methods) → `reliabilitySensitivity()`. Engine underneath: `fancyModel()` / `fitModel()` / `modelOnAllY()` / `stabilityModel()`; latent roles are injected in `fitModel()`, so spec syntax never changes. `plotMedX()` is internal (behind `plot(x, item =)`). Checks: `dev/validate_stability.R`. Data: `stabilitySim` (built by `data-raw/stabilitySim.R`). Vignette: `vignettes/stability-decomposition.Rmd`.
+
 **Data screening/prep:** `maxMissing()`, `itemOrder()`, `allPairs()`, `invertVarOrder()`, `setDepRDiffs()`, `conScores()`, `expRse()`, `prMaxSD()`, `randomIntModel()`, `nullModellavaan()`
 
 ### Key Dependencies
@@ -57,7 +59,7 @@ Note: some functions call `library()` internally rather than relying on DESCRIPT
 Both appear in the package. The split is deliberate, not drift:
 
 - **`match()`** when the output must stay aligned to a specific input frame. It preserves that frame's row order and length exactly, and fills `NA` for non-matches. `resChange()` needs this: `$residuals` has one row per row of `T2_data`, in the same order, so it can be `cbind()`-ed straight back.
-- **`merge()`** when assembling a new analysis frame where row identity doesn't survive anyway. `xEffects()` wants the T1∩T2 intersection and returns nothing row-aligned to an input.
+- **`merge()`** when assembling a new analysis frame where row identity doesn't survive anyway. `stabilityData()` builds a fresh frame (T1∪T2 by default, for FIML) and returns nothing row-aligned to an input; it still uses `match()` for `interval_days`, which must stay aligned to the merged frame.
 
 Two traps worth remembering. `merge()` re-sorts by the `by` column (`sort = TRUE` is the default) and drops non-matching rows unless `all.x = TRUE` — so its result row count tells you nothing on its own. And on a duplicated key it silently produces a Cartesian product rather than erroring, inflating every N.
 

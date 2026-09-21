@@ -1,0 +1,250 @@
+---
+title: "How much of a trait's stability runs through experience?"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{How much of a trait's stability runs through experience?}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 7,
+                      fig.height = 4.5)
+```
+
+```{r setup}
+library(fancyr)
+```
+
+## The question
+
+People who are high on a trait at one time tend to be high on it later. That
+**stability** can come about in several ways. One of them runs through
+experience: a trait can lead people into certain experiences (*selection*),
+and those experiences can then reinforce the same trait (*socialization*).
+Roberts, Caspi and Moffitt (2003) called this the *corresponsive principle*.
+When it holds, part of a trait's continuity is carried by the experiences
+people select into.
+
+`stabilityPaths()` estimates that part directly. For each item measured at two
+waves, it splits the total stability coefficient -- the prediction of Time 2
+scores from Time 1 scores -- into additive pieces:
+
+| pathway | route | meaning |
+|---|---|---|
+| **mediated** | `Y1 -> X -> Y2` | stability carried by an experience X: selection × socialization |
+| **confounded** | `Y1 <-> C -> Y2` | stability due to a stable third variable C |
+| **residual** | `Y1 -> Y2` | stability not accounted for by either |
+
+The pieces add up to the total exactly. Dividing each by the total gives its
+**share** of the item's stability.
+
+## The data
+
+`stabilitySim` is a simulated study where the right answer is known. Six
+personality items were measured a year apart, and about 30% of people took a
+leadership role in between. Leadership was chosen by dominant (and, more
+weakly, sociable) people and increased those traits in turn. It also reduced
+anxiety, but anxiety played no part in who led. Socioeconomic status (`ses`)
+is related to several traits and to leadership. See `?stabilitySim` for
+details.
+
+The raw pieces are separate files, as they usually are in practice: a Time 1
+file, a Time 2 file, and a record listing only the people who led.
+
+```{r}
+str(stabilitySim$T1)
+head(stabilitySim$experience, 3)
+```
+
+`stabilityData()` puts them together. Items measured at both waves get `[T1]`
+and `[T2]` suffixes. Other Time 1 columns such as `ses` keep their names. Extra
+files are joined on the ID, and `fill` codes everyone missing from the
+leadership file as 0.
+
+```{r}
+d <- stabilityData(stabilitySim$T1, stabilitySim$T2, stabilitySim$experience,
+                   fill = list(leader = 0), date = "date")
+names(d)
+summary(d$interval_days)
+```
+
+### Who is in the sample?
+
+About a fifth of participants never returned for Time 2, and they were not a
+random fifth: dropout was more likely for people lower in `ses` and in
+`organized`. By default `stabilityData()` **keeps** those people:
+
+```{r}
+c(everyone = nrow(d), returned = sum(!is.na(d[["organized[T2]"]])))
+```
+
+That's deliberate. `stabilityPaths()` estimates its models by *full
+information maximum likelihood* (FIML), which uses every value each person
+has. Someone seen only at Time 1 still tells us about the Time 1 distribution
+and about how Time 1 scores relate to leadership and `ses`.
+
+Dropping them (listwise deletion, `join = "inner"`) is unbiased only if
+dropout is *missing completely at random*: unrelated to anything measured or
+not. FIML only needs dropout to be *missing at random*: it may depend on
+observed things like Time 1 scores, as it does here, as long as it doesn't
+further depend on the unobserved Time 2 score itself (Rubin, 1976; Schafer &
+Graham, 2002; Enders, 2010). The *Missing data* section of `?stabilityData`
+has more detail and references.
+
+## A first decomposition
+
+```{r}
+obs <- stabilityPaths(d, X = "leader", controls = "ses")
+obs
+```
+
+Each cell is an estimate, followed by its share of the item's total
+stability. In the standardized metric (the default), the total is the retest
+correlation.
+
+## Correcting for measurement error
+
+These are single items, and single items are noisy. That matters here in a
+specific way. The model asks whether leadership predicts Time 2 scores *over
+and above* Time 1 scores. If Time 1 scores are unreliable, "adjusting for Time
+1" only partly adjusts for the true trait. The unadjusted remainder of the
+trait gets credited to leadership, because dominant people both led and stayed
+dominant. That inflates the socialization path and with it the mediated share.
+It also deflates the residual stability, since noise at either wave weakens
+the retest correlation.
+
+If you know an item's reliability, for example from a short-interval retest
+where the trait itself shouldn't have changed, supply it. Each item is then
+modelled as a latent variable measured with that reliability:
+
+```{r}
+stabilitySim$reliability
+lat <- stabilityPaths(d, X = "leader", controls = "ses",
+                      reliability = stabilitySim$reliability)
+lat
+```
+
+Latent items are drawn as ellipses in the path diagram, labelled with the
+reliability assumed. The total is now the retest correlation *corrected for
+unreliability*, and the components still sum to it exactly.
+
+Because the data are simulated, we can check both analyses against the truth:
+
+```{r}
+tr  <- stabilitySim$truth
+key <- function(p) paste(p$item, p$path)
+cmp <- data.frame(
+  item     = obs$paths$item,
+  path     = obs$paths$path,
+  truth    = tr$est[match(key(obs$paths), key(tr))],
+  observed = round(obs$paths$est, 3),
+  latent   = round(lat$paths$est, 3)
+)
+cmp[cmp$item %in% c("dominant", "sociable", "anxious"), ]
+```
+
+The latent analysis lands close to the true values throughout. The observed
+analysis understates every item's total stability, and it overstates the share
+of `dominant`'s stability that runs through leadership:
+
+```{r}
+share <- function(x, it) x$paths$share[x$paths$item == it & x$paths$type == "mediated"]
+round(c(truth    = tr$share[tr$item == "dominant" & tr$type == "mediated"],
+        observed = share(obs, "dominant"),
+        latent   = share(lat, "dominant")), 3)
+```
+
+## Reading the results
+
+`summary()` adds standard errors, confidence intervals and p-values. It also
+shows the two structural paths whose product *is* each mediated pathway:
+selection (`leader ~ Y1`) and socialization (`Y2 ~ leader`).
+
+```{r}
+s <- summary(lat)
+s$structural
+```
+
+The `anxious` row shows why the decomposition is informative beyond the
+socialization effect alone. Leadership clearly *changes* anxiety (a sizeable
+negative `Y2 ~ leader`), yet it carries none of anxiety's stability. With no
+selection on anxiety, there is nothing for the socialization effect to
+multiply. The trait–experience relationship is real, but it is
+*non-corresponsive* in the sense of Wood and Harms (2017): the experience
+changes a trait that did not select people into it, so it doesn't contribute
+to that trait's continuity.
+
+## Plots
+
+With no arguments, `plot()` compares items. Each bar is an item's total
+stability, divided into its pathways:
+
+```{r}
+plot(lat)
+```
+
+With `item`, it draws that item's path diagram:
+
+```{r, fig.height = 5}
+plot(lat, item = "dominant")
+```
+
+## How much does the assumed reliability matter?
+
+Standard errors treat the supplied reliability as known, but it's an estimate
+too, and conclusions can depend on it. `reliabilitySensitivity()` refits the
+analysis across a grid of reliabilities. A value of 1 is the uncorrected
+analysis:
+
+```{r, fig.width = 8, fig.height = 4}
+sens <- reliabilitySensitivity(obs, rel = seq(.5, 1, .1))
+plot(sens)
+```
+
+The mediated share for `dominant` shrinks steadily as more of each item's
+variance is treated as error. Points drop out where an assumed reliability is
+too low for the data (corrected stability above 1), which is itself a useful
+bound on what reliability is plausible.
+
+## Interpreting shares, and some cautions
+
+- **Shares are shares of stability**, not of variance in Time 2 scores. A
+  small mediated share can still reflect a large experience effect when
+  selection is weak, as the `anxious` example shows.
+- **Timing.** The mediated pathway treats the experience as falling between
+  the waves. If it was measured at Time 2, or spans the whole interval, that
+  order is assumed rather than observed (Maxwell & Cole, 2007).
+- **Unmeasured confounding.** Controls address only the confounders you
+  measure. A stable variable left out of `controls` inflates both the
+  socialization path and the residual path.
+- **Totals near zero** make shares unstable. Read shares alongside the
+  estimates.
+- **Binary experiences** such as `leader` should not be given a reliability:
+  a record of whether something happened isn't a fallible measure of a
+  continuous trait.
+
+## Real data: traits and social power
+
+*This section will use data from Wood and Harms (2017) once it's added to
+the package.*
+
+## References
+
+Enders, C. K. (2010). *Applied missing data analysis*. Guilford Press.
+
+Maxwell, S. E., & Cole, D. A. (2007). Bias in cross-sectional analyses of
+longitudinal mediation. *Psychological Methods, 12*(1), 23--44.
+
+Roberts, B. W., Caspi, A., & Moffitt, T. E. (2003). Work experiences and
+personality development in young adulthood. *Journal of Personality and Social
+Psychology, 84*(3), 582--593.
+
+Rubin, D. B. (1976). Inference and missing data. *Biometrika, 63*(3), 581--592.
+
+Schafer, J. L., & Graham, J. W. (2002). Missing data: Our view of the state of
+the art. *Psychological Methods, 7*(2), 147--177.
+
+Wood, D., & Harms, P. D. (2017). Evidence of non-corresponsive causal
+relationships between personality traits and social power over time.
+*Personality and Social Psychology Bulletin, 43*(1), 33--45.

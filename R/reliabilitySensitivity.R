@@ -32,8 +32,9 @@
 #' @examples
 #' d <- stabilityData(stabilitySim$T1, stabilitySim$T2, stabilitySim$experience,
 #'                    fill = list(leader = 0))
-#' sp <- stabilityPaths(d, X = "leader", controls = "ses")
-#' sens <- reliabilitySensitivity(sp, rel = c(.6, .7, .8, .9, 1))
+#' sp <- stabilityPaths(d, items = c("dominant", "anxious"), X = "leader",
+#'                      controls = "ses")
+#' sens <- reliabilitySensitivity(sp, rel = c(.7, .85, 1))
 #' head(sens)
 #' plot(sens)
 #'
