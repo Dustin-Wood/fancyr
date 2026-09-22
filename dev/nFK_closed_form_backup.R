@@ -7,7 +7,7 @@
 #' reliable and perfectly intercorrelated returns \code{nFK = 1}.
 #' @param rMat Correlation/covariance matrix with reliability estimates on the
 #'   diagonal (ideally retest correlations over the same measurement interval as
-#'   the inter-item correlations; see Wood, Lowman, Armstrong, & Harms, 2022).
+#'   the inter-item correlations; see Wood, Lowman, Armstrong, & Harms, 2023).
 #'   Diagonals can range from 0 to 1; off-diagonals are observed inter-item
 #'   correlations. Variable names must be unique and contain no spaces.
 #' @param rotate Rotation method passed to \code{psych::principal()}. Defaults to

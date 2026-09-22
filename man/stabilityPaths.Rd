@@ -2,121 +2,277 @@
 % Please edit documentation in R/stabilityPaths.R
 \name{stabilityPaths}
 \alias{stabilityPaths}
-\title{Decompose Y1-Y2 Stability into Mediated and Confounded Pathways}
+\title{Decompose Stability into Mediated, Confounded, and Residual Pathways}
 \usage{
 stabilityPaths(
   data,
-  Y1,
-  Y2,
+  items = attr(data, "commonItems"),
   X = NULL,
   controls = NULL,
-  standardize = FALSE,
-  missing = "fiml",
-  return_fit = FALSE
+  reliability = NULL,
+  metric = c("std", "raw"),
+  suffixes = c("[T1]", "[T2]"),
+  missing = "fiml"
 )
 }
 \arguments{
-\item{data}{A data frame containing all named variables.}
+\item{data}{A data frame with one row per person, typically from
+\code{\link{stabilityData}}, holding item columns named with the
+\code{suffixes} (e.g. \code{"dominant[T1]"}, \code{"dominant[T2]"}) plus
+any \code{X} and \code{controls} columns.}
 
-\item{Y1}{Name of the Time 1 outcome column.}
+\item{items}{Character vector of item base names. Defaults to the
+\code{"commonItems"} attribute set by \code{\link{stabilityData}}. A
+single item is fine.}
 
-\item{Y2}{Name of the Time 2 outcome column.}
+\item{X}{Character vector of experience (mediator) variable names, or
+\code{NULL} (default) to decompose stability into confounded and residual
+parts only. Several are fitted as parallel mediators.}
 
-\item{X}{Character vector of mediator ("experience") variable names, or
-\code{NULL} (default) to fit a model with no mediators, decomposing
-stability into confounded and residual paths only.}
+\item{controls}{Character vector of control variable names, or \code{NULL}
+(default).}
 
-\item{controls}{Character vector of control variable names linked to
-\code{Y1} by undirected covariance, or \code{NULL} (default).}
+\item{reliability}{Optional reliabilities (ideally retest correlations) for
+latent-variable adjustment; see the Reliability and Choosing a reliability
+sections. \code{NULL} (default) analyses every variable as observed.}
 
-\item{standardize}{Logical. If \code{TRUE}, z-standardize \code{Y1},
-\code{Y2}, and all \code{X} and \code{controls} variables before fitting.
-Confounded-path terms are comparable across controls only when this is
-\code{TRUE}, since otherwise each is expressed in its own control's units.
-Defaults to \code{FALSE}.}
+\item{metric}{\code{"std"} (default) for fully standardized estimates;
+\code{"raw"} for estimates in the variables' own units.}
 
-\item{missing}{Missing-data handling passed to \code{\link[lavaan]{sem}}.
-Defaults to \code{"fiml"}.}
+\item{suffixes}{Length-2 character vector: the suffixes that mark each
+item's Time 1 and Time 2 columns. Defaults to \code{c("[T1]", "[T2]")}.}
 
-\item{return_fit}{Logical. If \code{TRUE}, include the fitted lavaan object
-in \code{$fit}. Defaults to \code{FALSE}.}
+\item{missing}{Missing-data method passed to \code{\link[lavaan]{sem}}.
+Defaults to \code{"fiml"}; \code{"listwise"} drops incomplete cases.}
 }
 \value{
-A named list with components:
-\item{paths}{Data frame of the decomposition: one row per pathway plus a
-  \code{total} row, with \code{est}, \code{se}, \code{pvalue}, confidence
-  limits, and \code{propTotal} (each path's share of total stability).}
-\item{coefficients}{Data frame of the underlying structural coefficients,
-  labelled with the original variable names.}
-\item{totalStability}{The total stability coefficient (scalar).}
-\item{n}{Number of observations used.}
-\item{converged}{Logical; \code{FALSE} if the model failed to fit, in which
-  case \code{paths} is returned with \code{NA} estimates.}
-\item{syntax}{The generated lavaan model syntax, as a character string.}
-\item{varmap}{Data frame mapping internal canonical names to originals.}
-\item{fit}{The lavaan fit object, if \code{return_fit = TRUE}.}
+An object of class \code{fancyStability}: a list with
+\item{paths}{Long data frame, one row per item per pathway: \code{item},
+  \code{path}, \code{via}, \code{type} (\code{"residual"}, \code{"mediated"},
+  \code{"confounded"} or \code{"total"}), \code{est}, \code{se},
+  \code{pvalue}, \code{ci.lower}, \code{ci.upper}, and \code{share}.}
+\item{coefficients}{Long data frame of the structural coefficients behind
+  the decomposition for every item, e.g. selection (\code{X ~ Y1}) and
+  socialization (\code{Y2 ~ X}).}
+\item{summary}{Wide data frame, one row per item: sample sizes
+  (\code{n} used by the model; \code{n_T1}, \code{n_T2}, \code{n_both}
+  observed), the observed retest correlation \code{r_obs}, the reliabilities
+  used, \code{admissible}, \code{status}, then an estimate and \code{_p}
+  column for every pathway and structural coefficient.}
+\item{status}{Data frame of each item's fitting status and admissibility.}
+\item{fits}{Named list of the per-item \code{\link{fitModel}} results.}
+\item{settings}{The \code{items}, \code{X}, \code{controls}, resolved
+  reliabilities, \code{metric}, \code{suffixes} and \code{missing} used.}
+\item{data}{The columns of \code{data} the models used, kept so the analysis
+  can be refitted by \code{\link{reliabilitySensitivity}}.}
+
+Print the object for a compact table of each item's decomposition,
+\code{summary()} it for standard errors and the underlying selection and
+socialization paths, and \code{plot()} it to compare items (or draw one
+item's path diagram with \code{plot(x, item = )}).
 }
 \description{
-Fits a saturated path model that partitions the total stability coefficient
-linking \code{Y1} to \code{Y2} into three kinds of pathway:
+For each item measured at two waves, splits its stability -- how strongly
+Time 1 scores predict Time 2 scores -- into the parts carried by
+different routes:
 
 \itemize{
-  \item \strong{Mediated} paths \code{Y1 -> X -> Y2}, one per variable in
-    \code{X}, each a specific indirect effect controlling for the other
-    mediators and all controls.
-  \item \strong{Confounded} paths \code{Y1 <-> C -> Y2}, one per variable in
-    \code{controls}. The \code{Y1}-\code{C} link is estimated as an
-    \emph{undirected covariance}, so the model makes no claim about whether
-    \code{Y1} influences \code{C} or the reverse.
-  \item The \strong{residual} stability path \code{Y1 -> Y2} remaining once
-    all mediators and controls are in the model.
+  \item \strong{Mediated} (\code{Y1 -> X -> Y2}): stability that runs through
+    an experience. People's Time 1 standing predicts whether they have the
+    experience (\emph{selection}), and the experience predicts their Time 2
+    standing (\emph{socialization}); the product of the two is this path.
+  \item \strong{Confounded} (\code{Y1 <-> C -> Y2}): stability attributable to
+    a stable third variable, such as a demographic, that is associated with
+    Time 1 scores and predicts Time 2 scores.
+  \item \strong{Residual} (\code{Y1 -> Y2}): stability left once the mediated
+    and confounded routes are accounted for.
 }
 
-These terms sum exactly to the total stability coefficient, i.e. the simple
-regression of \code{Y2} on \code{Y1} with nothing else in the model.
+The parts sum exactly to the \strong{total} stability. In the default
+standardized metric the total is the retest correlation, and each part's
+\code{share} is the proportion of it carried by that route.
+
+Optionally, items (and continuous experiences or controls) can be adjusted
+for their retest reliability by supplying \code{reliability}, which models
+each as a latent variable: the person's expected score over a chosen
+interval (see "Choosing a reliability"). A single Time 1 answer otherwise
+controls for that expected score only partly, and the remainder inflates the
+apparent effect of the experience and the share of stability it seems to
+carry.
 }
 \details{
-Writing \eqn{v_1} for \eqn{Var(Y1)}, \eqn{c_{1k}} for \eqn{Cov(Y1, C_k)}, and
-using the fitted coefficients, the decomposition is
+Writing \eqn{v_1} for \eqn{Var(Y1)} and \eqn{c_{1k}} for \eqn{Cov(Y1, C_k)},
+the decomposition is
 
-\deqn{b_{total} = b_{21} + \sum_j b_{Xj1} b_{2Xj} +
-  \sum_k (c_{1k}/v_1)(b_{2Ck} + \sum_j b_{XjCk} b_{2Xj})}
+\deqn{b_{total} = b_{21} + \sum_j b_{X_j1} b_{2X_j} +
+  \sum_k (c_{1k}/v_1)(b_{2C_k} + \sum_j b_{X_jC_k} b_{2X_j})}
 
-The \eqn{c_{1k}/v_1} scaling puts each confounded path on the same metric as
-the stability coefficient it decomposes; without it the term is inflated by a
-factor of \eqn{Var(Y1)} and the components do not sum to the total. Note that
-\eqn{c_{1k}/v_1} is numerically identical to the coefficient from regressing
-\eqn{C_k} on \eqn{Y1} -- the covariance parameterization is used because it is
-an equivalent just-identified form that does not assert a direction.
+Each confounded term uses the control's \emph{total} effect on \code{Y2},
+including routes onward through the mediators, so confounded shares do not
+change when mediators are added or removed; mediators subdivide the residual
+path only. The \code{Y1}-\code{C} link is an undirected covariance, so the
+model makes no claim about which causes which. Controls predict every
+mediator and \code{Y2}, and mediator residuals covary, which leaves the model
+just-identified (df = 0): this is what makes the parts sum exactly. See
+\code{\link{stabilityModel}} for the model syntax.
 
-Each control's contribution uses its \emph{total} effect on \code{Y2}, which
-includes routes running onward through the mediators. A consequence is that
-the confounded shares are unchanged by adding or removing mediators; mediators
-subdivide the residual path only.
-
-Controls are entered as predictors of every mediator and of \code{Y2}, all
-control pairs are left free to covary, and mediator residuals are free to
-covary with each other. This leaves the model just-identified (df = 0), which
-is what makes the decomposition exact.
+In the standardized metric every term is rescaled by the same factor,
+\eqn{SD(Y1)/SD(Y2)}, so additivity holds in both metrics. With latent items
+the standardization is of the latent variables: the total is then the
+stability of the expected scores, i.e. the retest correlation adjusted for
+the items' reliabilities.
 }
+\section{Reliability}{
+
+\code{reliability} accepts, from simplest to most specific:
+\itemize{
+  \item one number, used for every item at both waves, e.g. \code{.7};
+  \item a named vector, e.g. \code{c(dominant = .75, warm = .6, ses = .9)}.
+    Item names set that item's reliability at both waves; names of \code{X}
+    or \code{controls} variables set that variable's reliability in every
+    item's model. Items not named are left observed;
+  \item a data frame with columns \code{item}, \code{T1} and \code{T2}, for
+    reliabilities that differ between waves. Rows naming an \code{X} or
+    \code{controls} variable use their \code{T1} value.
+}
+Standard errors treat the reliability as known, and results can depend
+heavily on it: use \code{\link{reliabilitySensitivity}} to see how much. Do
+not supply a reliability for a binary experience; a 0/1 record of whether
+something happened is the quantity of interest itself, not one answer
+sampled from a range of answers a person might give.
+
+If a supplied reliability is lower than the retest correlation implies is
+possible, the adjusted stability exceeds 1. That item is still reported,
+but flagged \code{admissible = FALSE}.
+}
+
+\section{Choosing a reliability}{
+
+An item modelled with a \code{reliability} stands for the person's
+\emph{expected score} on that item over some interval \eqn{t}: roughly, the
+average of the answers they would give if asked repeatedly across that span.
+Nothing here assumes this expected score is fixed. It can change between
+\code{Y1} and \code{Y2}, which is the whole subject of the model. The
+appropriate reliability is the share of variance in a single answer that
+is shared with the expected score over \eqn{t}.
+
+A \strong{retest correlation over an interval of about \eqn{t}} estimates
+exactly this (Wood et al., 2023). Whatever contributes to both answers --
+whatever persists over \eqn{t} -- is part of the expected score. Influences
+that come and go within \eqn{t}, such as mood, the day's circumstances, or
+memory of having just answered, still contribute systematically to each
+answer. They are simply not part of the expected score over \eqn{t}. As
+\eqn{t} lengthens from an hour to a day, a week, a month or a year, more of
+the influences behind an answer have the chance to change, and the retest
+correlation falls (Watson, 2004).
+
+The choice of \eqn{t} therefore decides what the adjusted estimates
+describe:
+\itemize{
+  \item \strong{Short} (the same session, or a few days to a week): nearly
+    everything behind an answer persists, so the reliability is high and the
+    adjustment small. The adjusted stability then describes scores that
+    still carry the circumstances of the particular occasion.
+  \item \strong{Long} (approaching the interval between \code{Y1} and
+    \code{Y2}): the change the model is meant to study is folded into the
+    reliability, and the adjustment does too much. In the limit, a
+    reliability equal to the \code{Y1}-\code{Y2} retest correlation makes
+    the adjusted stability 1 by construction.
+  \item \strong{In between}: long enough that what is specific to an
+    occasion has turned over, and short relative to the interval being
+    studied. For waves a year apart, two- to four-week retest correlations
+    are a reasonable target.
+}
+Internal consistency (e.g. alpha) fits the same logic, since its items are
+answered at different moments too, typically about a minute apart. Alpha is
+often described as underestimating reliability. What it underestimates is
+the retest reliability of those items \emph{over that short interval}. If two
+items answered about a minute apart give an alpha of .80, each item's own
+retest correlation over a minute (averaged, e.g. as a geometric mean) should
+be higher than .80. Over longer intervals such as two weeks, observed retest
+correlations are regularly \emph{lower} than alpha (McCrae et al., 2011;
+Chmielewski & Watson, 2009). So alpha is not a suitable value for waves
+months or years apart, and a single item has no alpha at all.
+
+Suitable retest values are often unavailable. Published retest correlations
+for similar items or measures can give a starting range. Whatever the
+source, check the conclusions across the plausible range with
+\code{\link{reliabilitySensitivity}}. The observed \code{Y1}-\code{Y2}
+retest correlation is a floor: a reliability below it is inadmissible.
+}
+
+\section{Missing data}{
+
+By default (\code{join = "full"}) the result keeps everyone measured at
+\emph{either} wave, including people who dropped out after Time 1. That
+matters because \code{\link{stabilityPaths}} fits its models by full
+information maximum likelihood (FIML), which uses every value a person
+has rather than discarding anyone with a missing value. A person seen only
+at Time 1 still informs the Time 1 variance and how Time 1 scores relate to
+the experience and the controls.
+
+The payoff is in the assumption required. Analysing only people seen at both
+waves (\code{join = "inner"}, i.e. listwise deletion) is unbiased only if
+dropout is \emph{missing completely at random} (MCAR): unrelated to anything,
+measured or not. FIML is unbiased under the weaker \emph{missing at random}
+(MAR) assumption: dropout may depend on things that were observed -- such as
+a person's Time 1 score or a control variable -- as long as, given those, it
+does not further depend on the unobserved Time 2 score itself. Since people
+who drop out of longitudinal studies commonly differ at baseline, MAR is
+usually the far more plausible of the two. Including variables in the model
+that predict dropout makes MAR more plausible still.
+
+Neither approach protects against dropout that depends on the unobserved
+Time 2 score itself (\emph{missing not at random}); that calls for
+sensitivity analysis rather than a different default.
+
+Key references: Rubin (1976) for the MCAR/MAR/MNAR distinctions; Schafer
+and Graham (2002) and Graham (2009) for accessible reviews recommending ML
+and multiple imputation over deletion; Enders and Bandalos (2001) for FIML in
+structural equation models; Enders (2010) for a book-length treatment; and
+Collins, Schafer and Kam (2001) on adding variables that predict
+missingness.
+}
+
 \examples{
-set.seed(1)
-n  <- 400
-C1 <- rnorm(n)
-Y1 <- 0.5 * C1 + rnorm(n)
-X1 <- 0.35 * Y1 + rnorm(n)
-Y2 <- 0.45 * Y1 + 0.30 * X1 + 0.25 * C1 + rnorm(n)
-d  <- data.frame(Y1, Y2, X1, C1)
+d <- stabilityData(stabilitySim$T1, stabilitySim$T2, stabilitySim$experience,
+                   keep = "T1", fill = list(leader = 0))
 
-# mediated + confounded decomposition
-stabilityPaths(d, "Y1", "Y2", X = "X1", controls = "C1")$paths
+# observed items
+sp <- stabilityPaths(d, X = "leader", controls = "ses")
+sp
 
-# no mediator: confounding only
-stabilityPaths(d, "Y1", "Y2", controls = "C1")$paths
+# adjusted for each item's retest reliability
+spL <- stabilityPaths(d, X = "leader", controls = "ses",
+                      reliability = stabilitySim$reliability)
+spL
+summary(spL)
+plot(spL)
+plot(spL, item = "dominant")
 
+}
+\references{
+Chmielewski, M., & Watson, D. (2009). What is being assessed and why it
+matters: The impact of transient error on trait research. \emph{Journal of
+Personality and Social Psychology, 97}(1), 186--202.
+
+McCrae, R. R., Kurtz, J. E., Yamagata, S., & Terracciano, A. (2011).
+Internal consistency, retest reliability, and their implications for
+personality scale validity. \emph{Personality and Social Psychology
+Review, 15}(1), 28--50.
+
+Watson, D. (2004). Stability versus change, dependability versus error:
+Issues in the assessment of personality over time. \emph{Journal of
+Research in Personality, 38}(4), 319--350.
+
+Wood, D., Lowman, G. H., Armstrong, B. F., III, & Harms, P. D. (2023).
+Using retest-adjusted correlations as indicators of the semantic similarity
+of items. \emph{Journal of Personality and Social Psychology, 125}(2),
+437--454. \doi{10.1037/pspp0000441}
 }
 \seealso{
-\code{\link{stabilityModel}} for the underlying model specification,
-  \code{\link{allYstabilities}} to apply the same model across many items,
-  and \code{\link{plotMedX}} to draw the result.
+\code{\link{stabilityData}} to build \code{data},
+  \code{\link{plot.fancyStability}}, \code{\link{reliabilitySensitivity}},
+  and \code{\link{stabilityModel}} / \code{\link{modelOnAllY}} for the
+  underlying machinery.
 }

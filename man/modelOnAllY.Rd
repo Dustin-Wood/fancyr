@@ -9,7 +9,8 @@ modelOnAllY(
   data,
   items,
   suffixes = c(Y1 = "[T1]", Y2 = "[T2]"),
-  standardize = FALSE,
+  reliability = NULL,
+  metric = c("raw", "std"),
   return_estimates = TRUE
 )
 }
@@ -25,8 +26,15 @@ in \code{spec$vars}.}
 item base name to form the column for each sliding role. Names must match
 \code{spec$slide}. Defaults to \code{c(Y1 = "[T1]", Y2 = "[T2]")}.}
 
-\item{standardize}{Logical. If \code{TRUE}, z-standardize every bound column
-within each item's model. Defaults to \code{FALSE}.}
+\item{reliability}{Optional reliabilities for latent roles, passed to
+\code{\link{fitModel}}. Either one named numeric vector keyed by role
+(e.g. \code{c(Y1 = .7, Y2 = .7)}), applied to every item, or a list named
+by item whose elements are such vectors, for item-specific values. Items
+absent from the list are fitted with every role observed. Defaults to
+\code{NULL}.}
+
+\item{metric}{\code{"raw"} (default) or \code{"std"}; see
+\code{\link{fitModel}}.}
 
 \item{return_estimates}{Logical. If \code{TRUE} (default), include the full
 per-item \code{\link{fitModel}} results in \code{$modelEstimates}.}
@@ -36,7 +44,7 @@ A named list with components:
 \item{paths}{Long data frame, one row per item per extracted parameter,
   carrying the annotation columns declared in \code{spec$extract} plus
   \code{est}, \code{se}, \code{pvalue}, \code{ci.lower}, \code{ci.upper},
-  and \code{propTotal} when the spec defines a total.}
+  and \code{share} (estimate / total) when the spec defines a total.}
 \item{coefficients}{Long data frame of structural coefficients for every
   item, labelled with the original variable names.}
 \item{summary}{Wide data frame, one row per item: \code{item}, \code{n},
@@ -44,11 +52,12 @@ A named list with components:
   extracted parameter and every structural coefficient. Same numbers as
   \code{$paths} and \code{$coefficients}, pivoted for reading across items;
   see Details for the column naming.}
-\item{totalStability}{Data frame of the total per item, if the spec defines
-  one; otherwise \code{NULL}.}
+\item{total}{Data frame of the total per item, if the spec defines one;
+  otherwise \code{NULL}.}
 \item{nobs}{Data frame of sample sizes per item.}
-\item{status}{Data frame with one row per item: \code{"Success"} or a short
-  description of why that item was skipped.}
+\item{status}{Data frame with one row per item: \code{status}
+  (\code{"Success"} or a short description of what went wrong) and
+  \code{admissible}.}
 \item{modelEstimates}{Named list of per-item \code{fitModel} results, or
   \code{NULL} if \code{return_estimates = FALSE}.}
 }
@@ -58,7 +67,7 @@ each variable into the model's sliding role(s) while every other variable
 stays fixed. Results are stacked into long-format data frames with an
 \code{item} column.
 
-This is the generic engine behind \code{\link{allYstabilities}}. Use it
+This is the generic engine behind \code{\link{stabilityPaths}}. Use it
 directly whenever you have a lavaan model you want to run across a large set
 of parallel outcomes.
 }
@@ -109,5 +118,5 @@ modelOnAllY(spec, d, items = c("a", "b"))$paths
 }
 \seealso{
 \code{\link{fancyModel}}, \code{\link{fitModel}},
-  \code{\link{allYstabilities}}
+  \code{\link{stabilityPaths}}
 }

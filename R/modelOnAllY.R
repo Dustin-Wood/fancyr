@@ -5,7 +5,7 @@
 #' stays fixed. Results are stacked into long-format data frames with an
 #' \code{item} column.
 #'
-#' This is the generic engine behind \code{\link{allYstabilities}}. Use it
+#' This is the generic engine behind \code{\link{stabilityPaths}}. Use it
 #' directly whenever you have a lavaan model you want to run across a large set
 #' of parallel outcomes.
 #'
@@ -42,8 +42,14 @@
 #' @param suffixes Named character vector giving the suffix appended to each
 #'   item base name to form the column for each sliding role. Names must match
 #'   \code{spec$slide}. Defaults to \code{c(Y1 = "[T1]", Y2 = "[T2]")}.
-#' @param standardize Logical. If \code{TRUE}, z-standardize every bound column
-#'   within each item's model. Defaults to \code{FALSE}.
+#' @param reliability Optional reliabilities for latent roles, passed to
+#'   \code{\link{fitModel}}. Either one named numeric vector keyed by role
+#'   (e.g. \code{c(Y1 = .7, Y2 = .7)}), applied to every item, or a list named
+#'   by item whose elements are such vectors, for item-specific values. Items
+#'   absent from the list are fitted with every role observed. Defaults to
+#'   \code{NULL}.
+#' @param metric \code{"raw"} (default) or \code{"std"}; see
+#'   \code{\link{fitModel}}.
 #' @param return_estimates Logical. If \code{TRUE} (default), include the full
 #'   per-item \code{\link{fitModel}} results in \code{$modelEstimates}.
 #'
@@ -51,7 +57,7 @@
 #' \item{paths}{Long data frame, one row per item per extracted parameter,
 #'   carrying the annotation columns declared in \code{spec$extract} plus
 #'   \code{est}, \code{se}, \code{pvalue}, \code{ci.lower}, \code{ci.upper},
-#'   and \code{propTotal} when the spec defines a total.}
+#'   and \code{share} (estimate / total) when the spec defines a total.}
 #' \item{coefficients}{Long data frame of structural coefficients for every
 #'   item, labelled with the original variable names.}
 #' \item{summary}{Wide data frame, one row per item: \code{item}, \code{n},
@@ -59,16 +65,17 @@
 #'   extracted parameter and every structural coefficient. Same numbers as
 #'   \code{$paths} and \code{$coefficients}, pivoted for reading across items;
 #'   see Details for the column naming.}
-#' \item{totalStability}{Data frame of the total per item, if the spec defines
-#'   one; otherwise \code{NULL}.}
+#' \item{total}{Data frame of the total per item, if the spec defines one;
+#'   otherwise \code{NULL}.}
 #' \item{nobs}{Data frame of sample sizes per item.}
-#' \item{status}{Data frame with one row per item: \code{"Success"} or a short
-#'   description of why that item was skipped.}
+#' \item{status}{Data frame with one row per item: \code{status}
+#'   (\code{"Success"} or a short description of what went wrong) and
+#'   \code{admissible}.}
 #' \item{modelEstimates}{Named list of per-item \code{fitModel} results, or
 #'   \code{NULL} if \code{return_estimates = FALSE}.}
 #'
 #' @seealso \code{\link{fancyModel}}, \code{\link{fitModel}},
-#'   \code{\link{allYstabilities}}
+#'   \code{\link{stabilityPaths}}
 #'
 #' @examples
 #' set.seed(1)
@@ -91,13 +98,29 @@
 #' @export
 modelOnAllY <- function(spec, data, items,
                         suffixes = c(Y1 = "[T1]", Y2 = "[T2]"),
-                        standardize = FALSE, return_estimates = TRUE) {
+                        reliability = NULL, metric = c("raw", "std"),
+                        return_estimates = TRUE) {
 
   if (!inherits(spec, "fancyModel"))
     stop("`spec` must be a fancyModel object (see ?fancyModel).")
   if (!is.data.frame(data)) stop("`data` must be a data frame.")
   if (!length(items)) stop("`items` must name at least one item.")
   items <- as.character(items)
+  metric <- match.arg(metric)
+
+  # One role-keyed vector for all items, or a per-item list of them. Checked
+  # once here: inside the per-item loop a bad name would only surface as a
+  # message per item, and every item would come back empty.
+  all_roles <- c(spec$slide, names(spec$vars))
+  if (is.list(reliability)) {
+    if (is.null(names(reliability)) || any(!nzchar(names(reliability))))
+      stop("A list `reliability` must be named by item.")
+    for (r in reliability) checkReliability(r, all_roles)
+    rel_for <- function(item) reliability[[item]]
+  } else {
+    checkReliability(reliability, all_roles)
+    rel_for <- function(item) reliability
+  }
 
   if (is.null(names(suffixes)) || any(!nzchar(names(suffixes))))
     stop("`suffixes` must be a named vector, e.g. c(Y1 = \"[T1]\", Y2 = \"[T2]\").")
@@ -113,7 +136,7 @@ modelOnAllY <- function(spec, data, items,
   for (cl in c("est", "se", "pvalue", "ci.lower", "ci.upper"))
     na_paths[[cl]] <- NA_real_
   has_total <- "type" %in% names(spec$extract) && any(spec$extract$type == "total")
-  if (has_total) na_paths$propTotal <- NA_real_
+  if (has_total) na_paths$share <- NA_real_
 
   fits <- lapply(items, function(item) {
     bind <- stats::setNames(paste0(item, suffixes), names(suffixes))
@@ -126,7 +149,8 @@ modelOnAllY <- function(spec, data, items,
     }
 
     res <- tryCatch(
-      fitModel(spec, data, bind = bind, standardize = standardize),
+      fitModel(spec, data, bind = bind, reliability = rel_for(item),
+               metric = metric),
       error = function(e) {
         message("Model failed for item '", item, "': ", conditionMessage(e))
         list(status = paste("Model error:", conditionMessage(e)))
@@ -157,7 +181,7 @@ modelOnAllY <- function(spec, data, items,
   if (!is.null(coefficients)) rownames(coefficients) <- NULL
 
   ## ---- per-item scalars ---------------------------------------------------
-  totalStability <- if (has_total) {
+  total <- if (has_total) {
     tot <- paths[paths$type == "total", ]
     out <- data.frame(item = tot$item, est = tot$est, se = tot$se,
                       pvalue = tot$pvalue, ci.lower = tot$ci.lower,
@@ -178,6 +202,10 @@ modelOnAllY <- function(spec, data, items,
                s <- fits[[i]]$status
                if (is.null(s)) "Skipped: no result" else s
              }, character(1), USE.NAMES = FALSE),
+    admissible = vapply(items, function(i) {
+               a <- fits[[i]]$admissible
+               if (is.null(a)) NA else a
+             }, logical(1), USE.NAMES = FALSE),
     stringsAsFactors = FALSE)
 
   ## ---- wide one-row-per-item summary --------------------------------------
@@ -253,7 +281,7 @@ modelOnAllY <- function(spec, data, items,
     paths          = paths,
     coefficients   = coefficients,
     summary        = summary_df,
-    totalStability = totalStability,
+    total          = total,
     nobs           = nobs,
     status         = status,
     modelEstimates = if (return_estimates) fits else NULL

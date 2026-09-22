@@ -20,8 +20,8 @@ A \code{\link{fancyModel}} with sliding roles \code{c("Y1", "Y2")},
   \code{"mediated"}, \code{"confounded"}, or \code{"total"}.
 }
 \description{
-Constructs the \code{\link{fancyModel}} used by \code{\link{stabilityPaths}}
-and \code{\link{allYstabilities}}: a saturated path model that partitions the
+Constructs the \code{\link{fancyModel}} used by \code{\link{stabilityPaths}}:
+a saturated path model that partitions the
 total \code{Y1}-to-\code{Y2} stability coefficient into mediated paths
 (\code{Y1 -> X -> Y2}), confounded paths (\code{Y1 <-> C -> Y2}), and a
 residual stability path.
@@ -55,6 +55,6 @@ stabilityModel(X = c("course1", "course2"), controls = "SAT Math")
 
 }
 \seealso{
-\code{\link{stabilityPaths}} to fit one Y1/Y2 pair,
-  \code{\link{allYstabilities}} to slide across an item set.
+\code{\link{stabilityPaths}} to fit it across a set of items, with
+  optional reliability correction.
 }

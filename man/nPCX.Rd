@@ -23,7 +23,7 @@ R^2 value of 1.00.  So statistic provides the sum of R2 for orthogonal dimension
 \details{
 The correlation matrix should have correct reliability values on the diagonals (ideally,
 the value will be estimates of the retest values over the same measurement interval as typical for
-inter-item correlations within the matrix; see Wood, Lowman, Armstrong, & Harms, 2022).  If
+inter-item correlations within the matrix; see Wood, Lowman, Armstrong, & Harms, 2023).  If
 it does not, then the resulting estimate will be inflated - often substantially!!!
 
 There is also some code that is a work in progress to try to do this through 'setCor', although
@@ -34,4 +34,10 @@ it is commented out as it has problems at the moment.
 rmat <- cor(attitude)
 nPCX(rmat)
 }
+}
+\references{
+Wood, D., Lowman, G. H., Armstrong, B. F., III, & Harms, P. D. (2023).
+Using retest-adjusted correlations as indicators of the semantic similarity
+of items. \emph{Journal of Personality and Social Psychology, 125}(2),
+437--454. \doi{10.1037/pspp0000441}
 }
