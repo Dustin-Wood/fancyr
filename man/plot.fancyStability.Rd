@@ -48,7 +48,7 @@ draws that item's path diagram instead.
 }
 \examples{
 d <- stabilityData(stabilitySim$T1, stabilitySim$T2, stabilitySim$experience,
-                   fill = list(leader = 0))
+                   keep = "T1", fill = list(leader = 0))
 sp <- stabilityPaths(d, X = "leader", controls = "ses",
                      reliability = stabilitySim$reliability)
 plot(sp)

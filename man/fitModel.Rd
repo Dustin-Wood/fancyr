@@ -112,7 +112,7 @@ residual variance). Such fits are returned with their estimates, but with
 \examples{
 spec <- stabilityModel(X = "leader", controls = "ses")
 d <- stabilityData(stabilitySim$T1, stabilitySim$T2, stabilitySim$experience,
-                   fill = list(leader = 0))
+                   keep = "T1", fill = list(leader = 0))
 bind <- c(Y1 = "dominant[T1]", Y2 = "dominant[T2]")
 
 # observed variables

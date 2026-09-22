@@ -2,9 +2,9 @@
 #' @description
 #' Refits a \code{\link{stabilityPaths}} analysis over a grid of item
 #' reliabilities and collects the decomposition at each value. A reliability of
-#' 1 is the uncorrected (observed-variable) analysis, so the grid shows how the
-#' conclusions move as more of each item's variance is treated as measurement
-#' error.
+#' 1 is the unadjusted (observed-variable) analysis, so the grid shows how the
+#' conclusions move as single answers are treated as less closely tied to the
+#' expected score they are adjusted toward.
 #'
 #' @details
 #' At each grid value, every item gets that reliability at both waves. Any
@@ -13,8 +13,14 @@
 #' controls, metric, missing-data handling -- is taken from \code{x}.
 #'
 #' Grid values below an item's retest correlation typically give inadmissible
-#' solutions (corrected stability above 1); these rows are kept but flagged
+#' solutions (adjusted stability above 1); these rows are kept but flagged
 #' \code{admissible = FALSE}, and the plot method leaves them out.
+#'
+#' A useful grid spans the reliabilities you consider plausible for the items:
+#' ideally the range of their retest correlations over an interval of a few
+#' weeks. See the "Choosing a reliability" section of
+#' \code{\link{stabilityPaths}} for why that interval, rather than a
+#' same-session or very short one.
 #'
 #' @param x A \code{fancyStability} object from \code{\link{stabilityPaths}}.
 #' @param rel Numeric vector of reliabilities to try, each in (0, 1]. Defaults
@@ -31,7 +37,7 @@
 #'
 #' @examples
 #' d <- stabilityData(stabilitySim$T1, stabilitySim$T2, stabilitySim$experience,
-#'                    fill = list(leader = 0))
+#'                    keep = "T1", fill = list(leader = 0))
 #' sp <- stabilityPaths(d, items = c("dominant", "anxious"), X = "leader",
 #'                      controls = "ses")
 #' sens <- reliabilitySensitivity(sp, rel = c(.7, .85, 1))

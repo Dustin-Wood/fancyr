@@ -3,16 +3,22 @@
 #' Merges Time 1 and Time 2 data, plus any further files (e.g. records of an
 #' experience), into the one-row-per-person frame that
 #' \code{\link{stabilityPaths}} analyses. Items measured at both waves get
-#' \code{[T1]} and \code{[T2]} suffixes; everything else keeps its name.
+#' \code{[T1]} and \code{[T2]} suffixes. By default, columns found in only one
+#' wave are dropped; \code{keep} retains them.
 #'
 #' @details
 #' What ends up in the result:
 #' \itemize{
-#'   \item \strong{Items}: every column in \code{items}, from both waves,
-#'     renamed \code{item[T1]} and \code{item[T2]}.
-#'   \item \strong{Other T1 columns} (e.g. baseline controls such as
-#'     demographics) are kept under their own names. Other T2 columns are
-#'     dropped; to keep one, pass it (with the ID) through \code{...}.
+#'   \item \strong{Common items}: every column in \code{commonItems}, from both
+#'     waves, renamed \code{item[T1]} and \code{item[T2]}.
+#'   \item \strong{Columns in only one wave} depend on \code{keep}.
+#'     \code{"common"} (default) drops them all. \code{"T1"} keeps the Time 1
+#'     ones (e.g. baseline controls such as demographics) under their own
+#'     names. \code{"all"} keeps those from both waves; a name found in both
+#'     that is not a common item (e.g. a non-numeric column) gets the
+#'     \code{[T1]}/\code{[T2]} suffixes. A message lists whatever is dropped.
+#'     To bring in a single column, you can also pass it (with the ID) through
+#'     \code{...}.
 #'   \item \strong{Extra files} in \code{...} are joined on \code{id} and keep
 #'     their column names. They are left-joined: people who appear only in an
 #'     extra file are not added. A column name that already exists is an
@@ -22,6 +28,12 @@
 #'     person's two measurements, \code{NA} where either date is missing or
 #'     unparseable.
 #' }
+#'
+#' Order is preserved rather than sorted. Rows follow \code{T1}, with anyone
+#' seen only at Time 2 appended in \code{T2} order. Columns follow \code{T1}
+#' (the ID first, \code{[T1]} items left in place), then the \code{[T2]} items
+#' in the order of \code{commonItems}, then any kept Time 2-only columns, then
+#' columns from \code{...}.
 #'
 #' Every input must have one row per ID; duplicates are an error that names
 #' them (a duplicated key would otherwise multiply rows in the merge).
@@ -82,9 +94,12 @@
 #'   who had an experience.
 #' @param id Name of the ID column present in every data frame. Defaults to
 #'   \code{"id"}.
-#' @param items Character vector of item names measured at both waves. Defaults
-#'   to every numeric column (other than \code{id} and \code{date}) that
-#'   \code{T1} and \code{T2} share.
+#' @param commonItems Character vector of item names measured at both waves.
+#'   Defaults to every numeric column (other than \code{id} and \code{date})
+#'   that \code{T1} and \code{T2} share, in \code{T1} order.
+#' @param keep Which columns found in only one wave to keep: \code{"common"}
+#'   (default) keeps none, \code{"T1"} keeps the Time 1 ones, \code{"all"}
+#'   keeps both. Use \code{"T1"} when baseline controls live in \code{T1}.
 #' @param join \code{"full"} (default) keeps everyone present at either wave;
 #'   \code{"inner"} keeps only people present at both. See the Missing data
 #'   section.
@@ -98,24 +113,32 @@
 #'   with or without times.
 #'
 #' @return A data frame with one row per person, carrying attributes
-#'   \code{items} (the item names) and \code{id} (the ID column name), which
-#'   \code{\link{stabilityPaths}} uses as defaults.
+#'   \code{commonItems} (the common item names), \code{id} (the ID column
+#'   name), and \code{dropped} (names of any one-wave columns dropped by
+#'   \code{keep}). \code{\link{stabilityPaths}} uses the first two as defaults.
 #'
 #' @seealso \code{\link{stabilityPaths}}
 #'
 #' @examples
 #' d <- stabilityData(stabilitySim$T1, stabilitySim$T2, stabilitySim$experience,
-#'                    fill = list(leader = 0))
-#' attr(d, "items")
+#'                    keep = "T1", fill = list(leader = 0))
+#' attr(d, "commonItems")
 #' head(d)
 #'
 #' # everyone kept: people with no Time 2 data are still in the frame
 #' colSums(!is.na(d[, c("dominant[T1]", "dominant[T2]")]))
 #'
+#' # correlate every common item at Time 1 with every common item at Time 2
+#' dI <- stabilityData(stabilitySim$T1, stabilitySim$T2, join = "inner")
+#' ci <- attr(dI, "commonItems")
+#' round(cor(dI[paste0(ci, "[T1]")], dI[paste0(ci, "[T2]")]), 2)
+#'
 #' @export
-stabilityData <- function(T1, T2, ..., id = "id", items = NULL,
+stabilityData <- function(T1, T2, ..., id = "id", commonItems = NULL,
+                          keep = c("common", "T1", "all"),
                           join = c("full", "inner"), fill = NULL, date = NULL) {
 
+  keep   <- match.arg(keep)
   join   <- match.arg(join)
   extras <- list(...)
   if (length(extras) && !all(vapply(extras, is.data.frame, logical(1))))
@@ -140,31 +163,48 @@ stabilityData <- function(T1, T2, ..., id = "id", items = NULL,
       stop("Date column \"", date_cols[["T2"]], "\" not found in `T2`.")
   }
 
-  ## ---- items ----------------------------------------------------------------
-  if (is.null(items)) {
+  ## ---- common items ---------------------------------------------------------
+  if (is.null(commonItems)) {
     # shared numeric columns only: a shared date or text column is not an item
-    shared <- setdiff(intersect(names(T1), names(T2)), c(id, date_cols))
-    items  <- shared[vapply(shared, function(v)
+    shared      <- setdiff(intersect(names(T1), names(T2)), c(id, date_cols))
+    commonItems <- shared[vapply(shared, function(v)
       is.numeric(T1[[v]]) && is.numeric(T2[[v]]), logical(1))]
-    if (!length(items))
+    if (!length(commonItems))
       stop("`T1` and `T2` share no numeric columns besides `id`; name the ",
-           "`items` explicitly.")
+           "`commonItems` explicitly.")
   } else {
-    items <- as.character(items)
+    commonItems <- as.character(commonItems)
     for (w in c("T1", "T2")) {
-      absent <- setdiff(items, names(get(w)))
+      absent <- setdiff(commonItems, names(get(w)))
       if (length(absent))
         stop("Item(s) not found in `", w, "`: ", paste(absent, collapse = ", "))
     }
   }
 
-  t1_other <- setdiff(names(T1), c(id, items, date_cols[["T1"]]))
-  t1 <- T1[, c(id, items, t1_other), drop = FALSE]
-  names(t1)[match(items, names(t1))] <- paste0(items, "[T1]")
-  t2 <- T2[, c(id, items), drop = FALSE]
-  names(t2)[match(items, names(t2))] <- paste0(items, "[T2]")
+  ## ---- one-wave columns -----------------------------------------------------
+  t1_other <- setdiff(names(T1), c(id, commonItems, date_cols[["T1"]]))
+  t2_other <- setdiff(names(T2), c(id, commonItems, date_cols[["T2"]]))
+  t1_keep  <- if (keep == "common") character(0) else t1_other
+  t2_keep  <- if (keep == "all")    t2_other     else character(0)
+  dropped  <- unique(c(setdiff(t1_other, t1_keep), setdiff(t2_other, t2_keep)))
+  reportDropped(setdiff(t1_other, t1_keep), "T1", 'keep = "T1" or "all"')
+  reportDropped(setdiff(t2_other, t2_keep), "T2", 'keep = "all"')
 
-  out <- merge(t1, t2, by = id, all = (join == "full"))
+  # T1 layout, common items renamed in place; T2 items then T2 extras after it
+  t1 <- T1[, c(id, setdiff(names(T1)[names(T1) %in% c(commonItems, t1_keep)], id)),
+           drop = FALSE]
+  names(t1)[match(commonItems, names(t1))] <- paste0(commonItems, "[T1]")
+  t2 <- T2[, c(id, commonItems, t2_keep), drop = FALSE]
+  names(t2)[match(commonItems, names(t2))] <- paste0(commonItems, "[T2]")
+
+  # keep = "all": a shared non-item name (e.g. a text column) is suffixed too
+  clash <- intersect(t1_keep, t2_keep)
+  if (length(clash)) {
+    names(t1)[match(clash, names(t1))] <- paste0(clash, "[T1]")
+    names(t2)[match(clash, names(t2))] <- paste0(clash, "[T2]")
+  }
+
+  out <- merge(t1, t2, by = id, all = (join == "full"), sort = FALSE)
 
   ## ---- extra files ----------------------------------------------------------
   for (i in seq_along(extras)) {
@@ -174,8 +214,13 @@ stabilityData <- function(T1, T2, ..., id = "id", items = NULL,
       stop("Column(s) in data frame ", i, " of `...` already exist in the merged ",
            "data: ", paste(clash, collapse = ", "),
            ". Rename or drop them before merging.")
-    out <- merge(out, ex, by = id, all.x = TRUE)
+    out <- merge(out, ex, by = id, all.x = TRUE, sort = FALSE)
   }
+
+  # merge() scrambles rows even with sort = FALSE: restore T1 order, then
+  # T2-only people in T2 order
+  row_order <- c(T1[[id]], T2[[id]][!T2[[id]] %in% T1[[id]]])
+  out <- out[order(match(out[[id]], row_order)), , drop = FALSE]
 
   ## ---- fill -----------------------------------------------------------------
   if (!is.null(fill)) {
@@ -199,9 +244,21 @@ stabilityData <- function(T1, T2, ..., id = "id", items = NULL,
   }
 
   rownames(out) <- NULL
-  attr(out, "items") <- items
-  attr(out, "id")    <- id
+  attr(out, "commonItems") <- commonItems
+  attr(out, "id")          <- id
+  attr(out, "dropped")     <- dropped
   out
+}
+
+# One message per wave naming the non-common columns that `keep` dropped.
+reportDropped <- function(cols, wave, how, max_show = 8) {
+  if (!length(cols)) return(invisible())
+  more <- if (length(cols) > max_show)
+    sprintf(" (and %d more)", length(cols) - max_show) else ""
+  message("stabilityData(): dropped ", length(cols), " ", wave, " column(s) ",
+          "that are not common items: ",
+          paste(utils::head(cols, max_show), collapse = ", "), more,
+          ". Use ", how, " to keep them.")
 }
 
 # Dates may arrive as Date/POSIXct or as text in a few common orders.

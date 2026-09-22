@@ -9,7 +9,8 @@ stabilityData(
   T2,
   ...,
   id = "id",
-  items = NULL,
+  commonItems = NULL,
+  keep = c("common", "T1", "all"),
   join = c("full", "inner"),
   fill = NULL,
   date = NULL
@@ -24,9 +25,13 @@ who had an experience.}
 \item{id}{Name of the ID column present in every data frame. Defaults to
 \code{"id"}.}
 
-\item{items}{Character vector of item names measured at both waves. Defaults
-to every numeric column (other than \code{id} and \code{date}) that
-\code{T1} and \code{T2} share.}
+\item{commonItems}{Character vector of item names measured at both waves.
+Defaults to every numeric column (other than \code{id} and \code{date})
+that \code{T1} and \code{T2} share, in \code{T1} order.}
+
+\item{keep}{Which columns found in only one wave to keep: \code{"common"}
+(default) keeps none, \code{"T1"} keeps the Time 1 ones, \code{"all"}
+keeps both. Use \code{"T1"} when baseline controls live in \code{T1}.}
 
 \item{join}{\code{"full"} (default) keeps everyone present at either wave;
 \code{"inner"} keeps only people present at both. See the Missing data
@@ -44,23 +49,30 @@ with or without times.}
 }
 \value{
 A data frame with one row per person, carrying attributes
-  \code{items} (the item names) and \code{id} (the ID column name), which
-  \code{\link{stabilityPaths}} uses as defaults.
+  \code{commonItems} (the common item names), \code{id} (the ID column
+  name), and \code{dropped} (names of any one-wave columns dropped by
+  \code{keep}). \code{\link{stabilityPaths}} uses the first two as defaults.
 }
 \description{
 Merges Time 1 and Time 2 data, plus any further files (e.g. records of an
 experience), into the one-row-per-person frame that
 \code{\link{stabilityPaths}} analyses. Items measured at both waves get
-\code{[T1]} and \code{[T2]} suffixes; everything else keeps its name.
+\code{[T1]} and \code{[T2]} suffixes. By default, columns found in only one
+wave are dropped; \code{keep} retains them.
 }
 \details{
 What ends up in the result:
 \itemize{
-  \item \strong{Items}: every column in \code{items}, from both waves,
-    renamed \code{item[T1]} and \code{item[T2]}.
-  \item \strong{Other T1 columns} (e.g. baseline controls such as
-    demographics) are kept under their own names. Other T2 columns are
-    dropped; to keep one, pass it (with the ID) through \code{...}.
+  \item \strong{Common items}: every column in \code{commonItems}, from both
+    waves, renamed \code{item[T1]} and \code{item[T2]}.
+  \item \strong{Columns in only one wave} depend on \code{keep}.
+    \code{"common"} (default) drops them all. \code{"T1"} keeps the Time 1
+    ones (e.g. baseline controls such as demographics) under their own
+    names. \code{"all"} keeps those from both waves; a name found in both
+    that is not a common item (e.g. a non-numeric column) gets the
+    \code{[T1]}/\code{[T2]} suffixes. A message lists whatever is dropped.
+    To bring in a single column, you can also pass it (with the ID) through
+    \code{...}.
   \item \strong{Extra files} in \code{...} are joined on \code{id} and keep
     their column names. They are left-joined: people who appear only in an
     extra file are not added. A column name that already exists is an
@@ -70,6 +82,12 @@ What ends up in the result:
     person's two measurements, \code{NA} where either date is missing or
     unparseable.
 }
+
+Order is preserved rather than sorted. Rows follow \code{T1}, with anyone
+seen only at Time 2 appended in \code{T2} order. Columns follow \code{T1}
+(the ID first, \code{[T1]} items left in place), then the \code{[T2]} items
+in the order of \code{commonItems}, then any kept Time 2-only columns, then
+columns from \code{...}.
 
 Every input must have one row per ID; duplicates are an error that names
 them (a duplicated key would otherwise multiply rows in the merge).
@@ -109,12 +127,17 @@ missingness.
 
 \examples{
 d <- stabilityData(stabilitySim$T1, stabilitySim$T2, stabilitySim$experience,
-                   fill = list(leader = 0))
-attr(d, "items")
+                   keep = "T1", fill = list(leader = 0))
+attr(d, "commonItems")
 head(d)
 
 # everyone kept: people with no Time 2 data are still in the frame
 colSums(!is.na(d[, c("dominant[T1]", "dominant[T2]")]))
+
+# correlate every common item at Time 1 with every common item at Time 2
+dI <- stabilityData(stabilitySim$T1, stabilitySim$T2, join = "inner")
+ci <- attr(dI, "commonItems")
+round(cor(dI[paste0(ci, "[T1]")], dI[paste0(ci, "[T2]")]), 2)
 
 }
 \references{

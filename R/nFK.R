@@ -17,7 +17,7 @@
 #'   the diagonal (range 0 to 1). Off-diagonals are observed inter-item
 #'   correlations. Reliability on the diagonal — ideally retest correlations
 #'   over the same measurement interval as the inter-item correlations
-#'   (Wood, Lowman, Armstrong, & Harms, 2022) — is what makes the statistic
+#'   (Wood, Lowman, Armstrong, & Harms, 2023) — is what makes the statistic
 #'   reliability-aware rather than just counting components. Setting the
 #'   diagonal to 1.0 returns \code{nFK = p} regardless of off-diagonals (every
 #'   item is its own perfectly-measured composite), which is correct under the
@@ -76,6 +76,11 @@
 #' Lord, F. M. (1958). Some relations between Guttman's principal components
 #' of scale analysis and other psychometric theory. \emph{Psychometrika},
 #' \emph{23}(4), 291-296.
+#'
+#' Wood, D., Lowman, G. H., Armstrong, B. F., III, & Harms, P. D. (2023).
+#' Using retest-adjusted correlations as indicators of the semantic similarity
+#' of items. \emph{Journal of Personality and Social Psychology, 125}(2),
+#' 437--454. \doi{10.1037/pspp0000441}
 #' @importFrom Matrix nearPD
 #' @export
 

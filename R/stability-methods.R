@@ -78,7 +78,7 @@ print.fancyStability <- function(x, digits = 2, ...) {
   cat("\n  estimate (share of total stability)\n")
   print(out, row.names = FALSE, right = FALSE)
   if (any(flag == " !"))
-    cat("\n  ! inadmissible solution (e.g. corrected stability > 1); see $status.",
+    cat("\n  ! inadmissible solution (e.g. adjusted stability > 1); see $status.",
         "\n    The reliability supplied is probably too low for that item.\n")
   if (any(flag == " ?"))
     cat("\n  ? model not estimated; see $status.\n")
@@ -174,7 +174,7 @@ print.summary.fancyStability <- function(x, digits = 3, ...) {
 #' @seealso \code{\link{stabilityPaths}}
 #' @examples
 #' d <- stabilityData(stabilitySim$T1, stabilitySim$T2, stabilitySim$experience,
-#'                    fill = list(leader = 0))
+#'                    keep = "T1", fill = list(leader = 0))
 #' sp <- stabilityPaths(d, X = "leader", controls = "ses",
 #'                      reliability = stabilitySim$reliability)
 #' plot(sp)

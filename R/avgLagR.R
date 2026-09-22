@@ -8,7 +8,7 @@
 #' which will index the degree to which correlations between variables over
 #' measurement interval (d; generally a period of time, or number of items apart)
 #' are smaller than the retest correlations of the variables
-#' over that interval (see Wood, Lowman, Armstrong, Harms, 2022)
+#' over that interval (see Wood, Lowman, Armstrong, & Harms, 2023)
 #'
 #' For instance: \code{phat_xy(d) = .80} indicates that the correlation between
 #' \code{x} and \code{y} over measurement interval t is 80\% of the retest correlations of X and Y
@@ -22,6 +22,11 @@
 #' @param x2 second matrix to be used (all variables should be the same as x1, and in the same order!!)
 #' @param posdef adjust correlations to make the matrix positive definite? ("Bock", "Higham", and default = FALSE)
 #'
+#' @references
+#' Wood, D., Lowman, G. H., Armstrong, B. F., III, & Harms, P. D. (2023).
+#' Using retest-adjusted correlations as indicators of the semantic similarity
+#' of items. \emph{Journal of Personality and Social Psychology, 125}(2),
+#' 437--454. \doi{10.1037/pspp0000441}
 #' @export
 
 avgLagR <- function(x1, x2, posdef = FALSE) {

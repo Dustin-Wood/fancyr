@@ -59,7 +59,7 @@ Note: some functions call `library()` internally rather than relying on DESCRIPT
 Both appear in the package. The split is deliberate, not drift:
 
 - **`match()`** when the output must stay aligned to a specific input frame. It preserves that frame's row order and length exactly, and fills `NA` for non-matches. `resChange()` needs this: `$residuals` has one row per row of `T2_data`, in the same order, so it can be `cbind()`-ed straight back.
-- **`merge()`** when assembling a new analysis frame where row identity doesn't survive anyway. `stabilityData()` builds a fresh frame (T1∪T2 by default, for FIML) and returns nothing row-aligned to an input; it still uses `match()` for `interval_days`, which must stay aligned to the merged frame.
+- **`merge()`** when assembling a new analysis frame where row identity doesn't survive anyway. `stabilityData()` builds a fresh frame (T1∪T2 by default, for FIML) and returns nothing row-aligned to an input; it still uses `match()` for `interval_days`, which must stay aligned to the merged frame, and to restore T1 row order afterwards (users want input order preserved, not sorted by ID).
 
 Two traps worth remembering. `merge()` re-sorts by the `by` column (`sort = TRUE` is the default) and drops non-matching rows unless `all.x = TRUE` — so its result row count tells you nothing on its own. And on a duplicated key it silently produces a Cartesian product rather than erroring, inflating every N.
 

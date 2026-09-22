@@ -58,13 +58,14 @@ head(stabilitySim$experience, 3)
 ```
 
 `stabilityData()` puts them together. Items measured at both waves get `[T1]`
-and `[T2]` suffixes. Other Time 1 columns such as `ses` keep their names. Extra
+and `[T2]` suffixes. Columns found in only one wave are dropped by default;
+`keep = "T1"` keeps the Time 1 ones, such as `ses`, under their own names. Extra
 files are joined on the ID, and `fill` codes everyone missing from the
 leadership file as 0.
 
 ```{r}
 d <- stabilityData(stabilitySim$T1, stabilitySim$T2, stabilitySim$experience,
-                   fill = list(leader = 0), date = "date")
+                   keep = "T1", fill = list(leader = 0), date = "date")
 names(d)
 summary(d$interval_days)
 ```
@@ -103,19 +104,20 @@ Each cell is an estimate, followed by its share of the item's total
 stability. In the standardized metric (the default), the total is the retest
 correlation.
 
-## Correcting for measurement error
+## Adjusting for retest reliability
 
-These are single items, and single items are noisy. That matters here in a
-specific way. The model asks whether leadership predicts Time 2 scores *over
-and above* Time 1 scores. If Time 1 scores are unreliable, "adjusting for Time
-1" only partly adjusts for the true trait. The unadjusted remainder of the
-trait gets credited to leadership, because dominant people both led and stayed
-dominant. That inflates the socialization path and with it the mediated share.
-It also deflates the residual stability, since noise at either wave weakens
-the retest correlation.
+These are single items, and a single answer reflects the particular occasion
+as well as where the person usually stands. That matters here in a specific
+way. The model asks whether leadership predicts Time 2 scores *over and above*
+Time 1 scores. A single Time 1 answer controls only partly for the person's
+expected score around Time 1. The rest of that expected score gets credited
+to leadership, because dominant people both led and stayed dominant. That
+inflates the socialization path and with it the mediated share. It also
+deflates the residual stability, since occasion-specific influences at either
+wave weaken the retest correlation.
 
-If you know an item's reliability, for example from a short-interval retest
-where the trait itself shouldn't have changed, supply it. Each item is then
+If you know an item's reliability, ideally a retest correlation over a few
+weeks (see *Choosing a reliability* below), supply it. Each item is then
 modelled as a latent variable measured with that reliability:
 
 ```{r}
@@ -126,8 +128,9 @@ lat
 ```
 
 Latent items are drawn as ellipses in the path diagram, labelled with the
-reliability assumed. The total is now the retest correlation *corrected for
-unreliability*, and the components still sum to it exactly.
+reliability assumed. The total is now the stability of the *expected scores*
+(the retest correlation adjusted for the items' reliabilities), and the
+components still sum to it exactly.
 
 Because the data are simulated, we can check both analyses against the truth:
 
@@ -190,11 +193,58 @@ With `item`, it draws that item's path diagram:
 plot(lat, item = "dominant")
 ```
 
+## Choosing a reliability
+
+An item given a reliability stands for the person's *expected score* on it
+over some interval *t*: roughly, the average of the answers they would give if
+asked repeatedly across that span. Nothing assumes the expected score is
+fixed. It can change between the waves, which is exactly what the model
+studies. The reliability to supply is the share of variance in a single
+answer that is shared with the expected score over *t*.
+
+A retest correlation over an interval of about *t* estimates this directly
+(Wood et al., 2023). Whatever contributes to both answers, meaning whatever
+persists over *t*, is part of the expected score. Influences that come and go
+within *t*, such as mood, the day's circumstances, or remembering an answer
+given a moment ago, still shape each answer systematically. They just aren't
+part of the expected score over *t*. As *t* stretches from an hour to a day,
+a week, a month or a year, more of what lies behind an answer has the chance
+to change, and retest correlations fall (Watson, 2004).
+
+So choosing *t* decides what the adjusted results describe:
+
+- **Short *t*.** With a same-session retest, or one a few days or a week
+  apart, nearly everything behind an answer persists. The reliability is high
+  and the adjustment small, and the adjusted stability still describes scores
+  tied to the particular occasion.
+- **Long *t*.** As *t* approaches the gap between the waves, the change the
+  model is meant to study gets folded into the reliability, and the
+  adjustment does too much. If you use the Time 1–Time 2 retest correlation
+  itself, the adjusted stability is 1 by construction.
+- **In between.** Long enough that what is specific to an occasion has turned
+  over, but short relative to the interval being studied. For waves a year
+  apart, retest correlations over two to four weeks are a reasonable target.
+
+Internal consistency (alpha) fits the same logic, because its items are
+answered at different moments too, typically about a minute apart. Alpha is
+often called an underestimate of reliability. What it underestimates is the
+retest reliability of those items *over that short interval*. If two items
+answered about a minute apart give an alpha of .80, each item's own retest
+correlation over a minute (averaged, say, as a geometric mean) should exceed
+.80. Over longer intervals such as two weeks, observed retest correlations are
+regularly *lower* than alpha (McCrae et al., 2011; Chmielewski & Watson,
+2009). So alpha isn't a suitable value for waves months or years apart, and a
+single item has no alpha anyway.
+
+Suitable retest values often don't exist for the items you have. Published
+retest correlations for similar items or measures can suggest a range, and
+the sensitivity analysis below shows whether the conclusions hold across it.
+
 ## How much does the assumed reliability matter?
 
 Standard errors treat the supplied reliability as known, but it's an estimate
 too, and conclusions can depend on it. `reliabilitySensitivity()` refits the
-analysis across a grid of reliabilities. A value of 1 is the uncorrected
+analysis across a grid of reliabilities. A value of 1 is the unadjusted
 analysis:
 
 ```{r, fig.width = 8, fig.height = 4}
@@ -202,9 +252,9 @@ sens <- reliabilitySensitivity(obs, rel = seq(.5, 1, .1))
 plot(sens)
 ```
 
-The mediated share for `dominant` shrinks steadily as more of each item's
-variance is treated as error. Points drop out where an assumed reliability is
-too low for the data (corrected stability above 1), which is itself a useful
+The mediated share for `dominant` shrinks steadily as the assumed reliability
+falls. Points drop out where an assumed reliability is too low for the data
+(adjusted stability above 1), which is itself a useful
 bound on what reliability is plausible.
 
 ## Interpreting shares, and some cautions
@@ -231,10 +281,19 @@ the package.*
 
 ## References
 
+Chmielewski, M., & Watson, D. (2009). What is being assessed and why it
+matters: The impact of transient error on trait research. *Journal of
+Personality and Social Psychology, 97*(1), 186--202.
+
 Enders, C. K. (2010). *Applied missing data analysis*. Guilford Press.
 
 Maxwell, S. E., & Cole, D. A. (2007). Bias in cross-sectional analyses of
 longitudinal mediation. *Psychological Methods, 12*(1), 23--44.
+
+McCrae, R. R., Kurtz, J. E., Yamagata, S., & Terracciano, A. (2011).
+Internal consistency, retest reliability, and their implications for
+personality scale validity. *Personality and Social Psychology Review,
+15*(1), 28--50.
 
 Roberts, B. W., Caspi, A., & Moffitt, T. E. (2003). Work experiences and
 personality development in young adulthood. *Journal of Personality and Social
@@ -245,6 +304,15 @@ Rubin, D. B. (1976). Inference and missing data. *Biometrika, 63*(3), 581--592.
 Schafer, J. L., & Graham, J. W. (2002). Missing data: Our view of the state of
 the art. *Psychological Methods, 7*(2), 147--177.
 
+Watson, D. (2004). Stability versus change, dependability versus error:
+Issues in the assessment of personality over time. *Journal of Research in
+Personality, 38*(4), 319--350.
+
 Wood, D., & Harms, P. D. (2017). Evidence of non-corresponsive causal
 relationships between personality traits and social power over time.
 *Personality and Social Psychology Bulletin, 43*(1), 33--45.
+
+Wood, D., Lowman, G. H., Armstrong, B. F., III, & Harms, P. D. (2023). Using
+retest-adjusted correlations as indicators of the semantic similarity of
+items. *Journal of Personality and Social Psychology, 125*(2), 437--454.
+https://doi.org/10.1037/pspp0000441

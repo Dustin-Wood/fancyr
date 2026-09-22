@@ -20,11 +20,13 @@
 #' standardized metric the total is the retest correlation, and each part's
 #' \code{share} is the proportion of it carried by that route.
 #'
-#' Optionally, items (and continuous experiences or controls) can be corrected
-#' for measurement error by supplying their \code{reliability}, which models
-#' each as a latent variable. Unreliable Time 1 scores otherwise leave part of
-#' the true trait unadjusted, which inflates the apparent effect of the
-#' experience and the share of stability it seems to carry.
+#' Optionally, items (and continuous experiences or controls) can be adjusted
+#' for their retest reliability by supplying \code{reliability}, which models
+#' each as a latent variable: the person's expected score over a chosen
+#' interval (see "Choosing a reliability"). A single Time 1 answer otherwise
+#' controls for that expected score only partly, and the remainder inflates the
+#' apparent effect of the experience and the share of stability it seems to
+#' carry.
 #'
 #' @details
 #' Writing \eqn{v_1} for \eqn{Var(Y1)} and \eqn{c_{1k}} for \eqn{Cov(Y1, C_k)},
@@ -45,7 +47,8 @@
 #' In the standardized metric every term is rescaled by the same factor,
 #' \eqn{SD(Y1)/SD(Y2)}, so additivity holds in both metrics. With latent items
 #' the standardization is of the latent variables: the total is then the
-#' retest correlation corrected for unreliability.
+#' stability of the expected scores, i.e. the retest correlation adjusted for
+#' the items' reliabilities.
 #'
 #' @section Reliability:
 #' \code{reliability} accepts, from simplest to most specific:
@@ -59,17 +62,87 @@
 #'     reliabilities that differ between waves. Rows naming an \code{X} or
 #'     \code{controls} variable use their \code{T1} value.
 #' }
-#' A suitable value for a single item is its short-interval retest correlation
-#' (e.g. over a few days or weeks, when the trait itself should not have
-#' changed). Standard errors treat the reliability as known, and results can
-#' depend heavily on it: use \code{\link{reliabilitySensitivity}} to see how
-#' much. Do not supply a reliability for a binary experience; a 0/1 indicator
-#' of whether something happened is not a fallible measure of a continuous
-#' latent variable.
+#' Standard errors treat the reliability as known, and results can depend
+#' heavily on it: use \code{\link{reliabilitySensitivity}} to see how much. Do
+#' not supply a reliability for a binary experience; a 0/1 record of whether
+#' something happened is the quantity of interest itself, not one answer
+#' sampled from a range of answers a person might give.
 #'
 #' If a supplied reliability is lower than the retest correlation implies is
-#' possible, the corrected stability exceeds 1. That item is still reported,
+#' possible, the adjusted stability exceeds 1. That item is still reported,
 #' but flagged \code{admissible = FALSE}.
+#'
+#' @section Choosing a reliability:
+#' An item modelled with a \code{reliability} stands for the person's
+#' \emph{expected score} on that item over some interval \eqn{t}: roughly, the
+#' average of the answers they would give if asked repeatedly across that span.
+#' Nothing here assumes this expected score is fixed. It can change between
+#' \code{Y1} and \code{Y2}, which is the whole subject of the model. The
+#' appropriate reliability is the share of variance in a single answer that
+#' is shared with the expected score over \eqn{t}.
+#'
+#' A \strong{retest correlation over an interval of about \eqn{t}} estimates
+#' exactly this (Wood et al., 2023). Whatever contributes to both answers --
+#' whatever persists over \eqn{t} -- is part of the expected score. Influences
+#' that come and go within \eqn{t}, such as mood, the day's circumstances, or
+#' memory of having just answered, still contribute systematically to each
+#' answer. They are simply not part of the expected score over \eqn{t}. As
+#' \eqn{t} lengthens from an hour to a day, a week, a month or a year, more of
+#' the influences behind an answer have the chance to change, and the retest
+#' correlation falls (Watson, 2004).
+#'
+#' The choice of \eqn{t} therefore decides what the adjusted estimates
+#' describe:
+#' \itemize{
+#'   \item \strong{Short} (the same session, or a few days to a week): nearly
+#'     everything behind an answer persists, so the reliability is high and the
+#'     adjustment small. The adjusted stability then describes scores that
+#'     still carry the circumstances of the particular occasion.
+#'   \item \strong{Long} (approaching the interval between \code{Y1} and
+#'     \code{Y2}): the change the model is meant to study is folded into the
+#'     reliability, and the adjustment does too much. In the limit, a
+#'     reliability equal to the \code{Y1}-\code{Y2} retest correlation makes
+#'     the adjusted stability 1 by construction.
+#'   \item \strong{In between}: long enough that what is specific to an
+#'     occasion has turned over, and short relative to the interval being
+#'     studied. For waves a year apart, two- to four-week retest correlations
+#'     are a reasonable target.
+#' }
+#' Internal consistency (e.g. alpha) fits the same logic, since its items are
+#' answered at different moments too, typically about a minute apart. Alpha is
+#' often described as underestimating reliability. What it underestimates is
+#' the retest reliability of those items \emph{over that short interval}. If two
+#' items answered about a minute apart give an alpha of .80, each item's own
+#' retest correlation over a minute (averaged, e.g. as a geometric mean) should
+#' be higher than .80. Over longer intervals such as two weeks, observed retest
+#' correlations are regularly \emph{lower} than alpha (McCrae et al., 2011;
+#' Chmielewski & Watson, 2009). So alpha is not a suitable value for waves
+#' months or years apart, and a single item has no alpha at all.
+#'
+#' Suitable retest values are often unavailable. Published retest correlations
+#' for similar items or measures can give a starting range. Whatever the
+#' source, check the conclusions across the plausible range with
+#' \code{\link{reliabilitySensitivity}}. The observed \code{Y1}-\code{Y2}
+#' retest correlation is a floor: a reliability below it is inadmissible.
+#'
+#' @references
+#' Chmielewski, M., & Watson, D. (2009). What is being assessed and why it
+#' matters: The impact of transient error on trait research. \emph{Journal of
+#' Personality and Social Psychology, 97}(1), 186--202.
+#'
+#' McCrae, R. R., Kurtz, J. E., Yamagata, S., & Terracciano, A. (2011).
+#' Internal consistency, retest reliability, and their implications for
+#' personality scale validity. \emph{Personality and Social Psychology
+#' Review, 15}(1), 28--50.
+#'
+#' Watson, D. (2004). Stability versus change, dependability versus error:
+#' Issues in the assessment of personality over time. \emph{Journal of
+#' Research in Personality, 38}(4), 319--350.
+#'
+#' Wood, D., Lowman, G. H., Armstrong, B. F., III, & Harms, P. D. (2023).
+#' Using retest-adjusted correlations as indicators of the semantic similarity
+#' of items. \emph{Journal of Personality and Social Psychology, 125}(2),
+#' 437--454. \doi{10.1037/pspp0000441}
 #'
 #' @inheritSection stabilityData Missing data
 #'
@@ -78,16 +151,16 @@
 #'   \code{suffixes} (e.g. \code{"dominant[T1]"}, \code{"dominant[T2]"}) plus
 #'   any \code{X} and \code{controls} columns.
 #' @param items Character vector of item base names. Defaults to the
-#'   \code{"items"} attribute set by \code{\link{stabilityData}}. A single item
-#'   is fine.
+#'   \code{"commonItems"} attribute set by \code{\link{stabilityData}}. A
+#'   single item is fine.
 #' @param X Character vector of experience (mediator) variable names, or
 #'   \code{NULL} (default) to decompose stability into confounded and residual
 #'   parts only. Several are fitted as parallel mediators.
 #' @param controls Character vector of control variable names, or \code{NULL}
 #'   (default).
-#' @param reliability Optional reliabilities for latent-variable correction;
-#'   see the Reliability section. \code{NULL} (default) treats every variable as
-#'   observed without error.
+#' @param reliability Optional reliabilities (ideally retest correlations) for
+#'   latent-variable adjustment; see the Reliability and Choosing a reliability
+#'   sections. \code{NULL} (default) analyses every variable as observed.
 #' @param metric \code{"std"} (default) for fully standardized estimates;
 #'   \code{"raw"} for estimates in the variables' own units.
 #' @param suffixes Length-2 character vector: the suffixes that mark each
@@ -127,13 +200,13 @@
 #'
 #' @examples
 #' d <- stabilityData(stabilitySim$T1, stabilitySim$T2, stabilitySim$experience,
-#'                    fill = list(leader = 0))
+#'                    keep = "T1", fill = list(leader = 0))
 #'
 #' # observed items
 #' sp <- stabilityPaths(d, X = "leader", controls = "ses")
 #' sp
 #'
-#' # corrected for each item's unreliability
+#' # adjusted for each item's retest reliability
 #' spL <- stabilityPaths(d, X = "leader", controls = "ses",
 #'                       reliability = stabilitySim$reliability)
 #' spL
@@ -142,7 +215,7 @@
 #' plot(spL, item = "dominant")
 #'
 #' @export
-stabilityPaths <- function(data, items = attr(data, "items"), X = NULL,
+stabilityPaths <- function(data, items = attr(data, "commonItems"), X = NULL,
                            controls = NULL, reliability = NULL,
                            metric = c("std", "raw"),
                            suffixes = c("[T1]", "[T2]"), missing = "fiml") {
@@ -150,7 +223,7 @@ stabilityPaths <- function(data, items = attr(data, "items"), X = NULL,
   if (!is.data.frame(data)) stop("`data` must be a data frame.")
   metric <- match.arg(metric)
   if (is.null(items) || !length(items))
-    stop("No `items` given, and `data` has no \"items\" attribute ",
+    stop("No `items` given, and `data` has no \"commonItems\" attribute ",
          "(set by stabilityData()).")
   items    <- as.character(items)
   X        <- if (is.null(X))        character(0) else as.character(X)
@@ -160,8 +233,12 @@ stabilityPaths <- function(data, items = attr(data, "items"), X = NULL,
   suffixes <- stats::setNames(as.character(suffixes), c("Y1", "Y2"))
 
   absent <- setdiff(c(X, controls), names(data))
-  if (length(absent))
-    stop("Column(s) not found in `data`: ", paste(absent, collapse = ", "))
+  if (length(absent)) {
+    hint <- if (any(absent %in% attr(data, "dropped")))
+      paste0("\n  stabilityData() dropped them as one-wave columns; rebuild ",
+             "`data` with keep = \"T1\" (or \"all\").") else ""
+    stop("Column(s) not found in `data`: ", paste(absent, collapse = ", "), hint)
+  }
   dup <- c(X, controls)[duplicated(c(X, controls))]
   if (length(dup))
     stop("A variable is named more than once across X/controls: ",

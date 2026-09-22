@@ -11,7 +11,7 @@ check <- function(desc, ok) {
 }
 
 d <- stabilityData(stabilitySim$T1, stabilitySim$T2, stabilitySim$experience,
-                   fill = list(leader = 0), date = "date")
+                   keep = "T1", fill = list(leader = 0), date = "date")
 rel <- stabilitySim$reliability
 
 cat("\n1. Components sum exactly to total\n")
@@ -81,7 +81,7 @@ for (j in seq_along(source_env$items)) {
 }
 bigT1$ses <- big$ses
 bigX <- data.frame(id = seq_len(20000), leader = big$leader)
-db <- stabilityData(bigT1, bigT2, bigX)
+db <- stabilityData(bigT1, bigT2, bigX, keep = "T1")
 bL <- stabilityPaths(db, X = "leader", controls = "ses", reliability = rel)
 bO <- stabilityPaths(db, X = "leader", controls = "ses")
 tb <- tr$est[match(key(bL$paths), key(tr))]
@@ -107,7 +107,37 @@ check("inner join keeps only both-wave people", nrow(dI) == nrow(stabilitySim$T2
 check("fill codes non-leaders 0", all(d$leader %in% c(0, 1)) &&
         sum(d$leader) == nrow(stabilitySim$experience))
 check("interval_days computed", all(d$interval_days[!is.na(d[["dominant[T2]"]])] > 300))
-check("items attribute set", identical(attr(d, "items"), names(rel)))
+check("commonItems attribute set", identical(attr(d, "commonItems"), names(rel)))
+
+# order preserved, not sorted; one-wave columns governed by `keep`
+oT1 <- data.frame(id = c(3, 1, 2), zeta = 1:3, age = 4:6, beta = c(2, 5, 1),
+                  note = "a")
+oT2 <- data.frame(id = c(9, 2, 3), beta = 3:1, onlyT2 = 1:3, zeta = c(1, 3, 2),
+                  note = "b")
+oc <- suppressMessages(stabilityData(oT1, oT2))
+check("rows follow T1, then T2-only people", identical(oc$id, c(3, 1, 2, 9)))
+check("keep = 'common' keeps only id + common items",
+      identical(names(oc), c("id", "zeta[T1]", "beta[T1]", "zeta[T2]", "beta[T2]")))
+check("dropped attribute lists one-wave columns",
+      setequal(attr(oc, "dropped"), c("age", "note", "onlyT2")))
+check("dropping is announced",
+      inherits(tryCatch(stabilityData(oT1, oT2), message = identity), "message"))
+check("merged values stay with their IDs",
+      identical(oc[["beta[T2]"]], c(1L, NA, 2L, 3L)) &&
+        identical(oc[["zeta[T1]"]], c(1L, 2L, 3L, NA)))
+o1 <- suppressMessages(stabilityData(oT1, oT2, keep = "T1"))
+check("keep = 'T1' keeps T1 layout in place",
+      identical(names(o1), c("id", "zeta[T1]", "age", "beta[T1]", "note",
+                             "zeta[T2]", "beta[T2]")))
+oa <- stabilityData(oT1, oT2, keep = "all", join = "inner")
+check("keep = 'all' suffixes a shared non-item column",
+      all(c("note[T1]", "note[T2]", "onlyT2") %in% names(oa)) &&
+        identical(oa$id, c(3, 2)))
+dC <- suppressMessages(stabilityData(stabilitySim$T1, stabilitySim$T2,
+                                     stabilitySim$experience, fill = list(leader = 0)))
+e <- tryCatch(stabilityPaths(dC, X = "leader", controls = "ses"), error = identity)
+check("dropped control gives a keep = hint",
+      inherits(e, "error") && grepl("keep = \"T1\"", conditionMessage(e)))
 
 cat("\n7. Reliability argument forms\n")
 rdf <- data.frame(item = c(names(rel), "ses"), T1 = c(rel, .9), T2 = c(rel, NA))
