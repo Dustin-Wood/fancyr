@@ -8,6 +8,65 @@ pathOrder <- function(paths) {
 
 pathLabel <- function(path) sub("^via_", "via ", path)
 
+# The structural coefficients behind each item's decomposition, labelled by
+# role: selection (X ~ Y1), change (Y2 ~ X), stability (Y2 ~ Y1), and control
+# (Y2 ~ C). One row per item per coefficient, with inference.
+effectTable <- function(x) {
+  s  <- x$settings
+  cf <- x$coefficients[x$coefficients$op == "~", ]
+  y1 <- paste0(cf$item, s$suffixes[1])
+  y2 <- paste0(cf$item, s$suffixes[2])
+  effect <- ifelse(cf$lhs %in% s$X & cf$rhs == y1, "selection",
+            ifelse(cf$lhs == y2 & cf$rhs %in% s$X, "change",
+            ifelse(cf$lhs == y2 & cf$rhs == y1, "stability",
+            ifelse(cf$lhs == y2 & cf$rhs %in% s$controls, "control", NA))))
+  keep <- !is.na(effect)
+  cf <- cf[keep, ]; effect <- effect[keep]
+  via <- ifelse(effect == "selection", cf$lhs, ifelse(effect == "stability", NA, cf$rhs))
+  path <- ifelse(effect == "selection", paste(cf$lhs, "~ Y1"),
+          ifelse(effect == "stability", "Y2 ~ Y1", paste("Y2 ~", cf$rhs)))
+  out <- data.frame(item = cf$item, effect = effect, via = via, path = path,
+                    est = cf$est, se = cf$se, pvalue = cf$pvalue,
+                    ci.lower = cf$ci.lower, ci.upper = cf$ci.upper,
+                    stringsAsFactors = FALSE)
+  rownames(out) <- NULL
+  out
+}
+
+# Combine sets of pathways (e.g. one per dummy code of a factor) into a single
+# pathway per item, for display. Pathways are additive, so the pooled estimate
+# and share are sums and the parts still add to the total. Inference columns
+# (se, CI, p) are left NA: a sum of pathways has no single test here. Works on
+# a fancyStability $paths table or a reliabilitySensitivity() result, where
+# pooling is done separately at each reliability.
+poolPaths <- function(p, pool) {
+  if (is.null(pool) || !length(pool)) return(p)
+  if (!is.list(pool) || is.null(names(pool)) || any(!nzchar(names(pool))))
+    stop("`pool` must be a named list of variable sets, ",
+         "e.g. list(organization = c(\"orgB\", \"orgC\")).", call. = FALSE)
+  for (nm in names(pool)) {
+    members <- paste0("via_", pool[[nm]])
+    unknown <- setdiff(members, p$path)
+    if (length(unknown))
+      stop("`pool$", nm, "` names variables with no pathway in `x`: ",
+           paste(sub("^via_", "", unknown), collapse = ", "), call. = FALSE)
+    hit <- p$path %in% members
+    keep <- intersect(c("item", "type", "reliability", "admissible"), names(p))
+    key <- if ("reliability" %in% names(p)) paste(p$item, p$reliability) else p$item
+    pooled <- do.call(rbind, lapply(unique(key[hit]), function(k) {
+      r <- p[hit & key == k, ]
+      o <- r[1, ]
+      o[setdiff(names(o), keep)] <- NA
+      o$path <- paste0("via_", nm)
+      if ("via" %in% names(o)) o$via <- nm
+      o$est <- sum(r$est); o$share <- sum(r$share)
+      o
+    }))
+    p <- rbind(p[!hit, ], pooled)
+  }
+  p
+}
+
 settingsLine <- function(x) {
   s <- x$settings
   rel <- s$reliability$table
@@ -32,6 +91,12 @@ settingsLine <- function(x) {
 #' @param x,object A \code{fancyStability} object from
 #'   \code{\link{stabilityPaths}}.
 #' @param digits Number of decimal places to print.
+#' @param pool Optional named list of variable sets whose pathways should be
+#'   shown combined, e.g. \code{list(organization = c("orgB", "orgC"))} to
+#'   show one \code{via organization} column instead of one per dummy code.
+#'   Display only: the model, its degrees of freedom, and \code{summary()} are
+#'   unaffected. Pathways are additive, so the combined estimate and share are
+#'   sums, and the parts still add to the total.
 #' @param ... Further arguments; for \code{plot()} with \code{item}, passed to
 #'   the path-diagram options below.
 #' @rdname stabilityPaths-methods
@@ -49,8 +114,8 @@ settingsLine <- function(x) {
 #'   \code{paths} (long table with inference) and \code{structural} (one row
 #'   per item).
 #' @export
-print.fancyStability <- function(x, digits = 2, ...) {
-  p <- x$paths
+print.fancyStability <- function(x, digits = 2, pool = NULL, ...) {
+  p <- poolPaths(x$paths, pool)
   cols <- pathOrder(p)
   items <- unique(p$item)
 
@@ -143,7 +208,28 @@ print.summary.fancyStability <- function(x, digits = 3, ...) {
 #' pathways: residual stability in grey, mediated pathways in blues, confounded
 #' pathways in oranges. Positive parts stack rightward from zero and negative
 #' parts leftward, and a black tick marks each item's total. With \code{item},
-#' draws that item's path diagram instead.
+#' draws that item's path diagram instead. With \code{type = "effects"}, draws
+#' a scatterplot of every item's selection effect (\code{X ~ Y1}, horizontal)
+#' against its change effect (\code{Y2 ~ X}, vertical), labelled by item.
+#'
+#' @section Selection and change effects:
+#' In the effects scatterplot, items in the upper-right and lower-left
+#' quadrants have selection and change effects of the same sign: the
+#' experience is more common among people high (or low) on the item, and
+#' pushes the item further in that direction, i.e. the relationship is
+#' \emph{corresponsive} (Roberts, Caspi, & Moffitt, 2003). Items in the other
+#' two quadrants have \emph{anti-corresponsive} effects, and items near an axis
+#' have one effect without the other. A point's fill shows its change effect
+#' (filled if p < .05, white otherwise) and its outline shows its selection
+#' effect (black if p < .05, light grey otherwise); a filled point takes its
+#' outline colour. Labels are placed with \pkg{ggrepel} when it is installed. To
+#' compare two analyses (e.g. with and without a reliability adjustment), pass
+#' both plots the same \code{xlim} and \code{ylim}.
+#'
+#' @references
+#' Roberts, B. W., Caspi, A., & Moffitt, T. E. (2003). Work experiences and
+#' personality development in young adulthood. \emph{Journal of Personality
+#' and Social Psychology, 84}(3), 582--593.
 #'
 #' @param x A \code{fancyStability} object from \code{\link{stabilityPaths}}.
 #' @param item Optional item name. If given, draw its path diagram.
@@ -152,6 +238,18 @@ print.summary.fancyStability <- function(x, digits = 3, ...) {
 #'   proportion of the total.
 #' @param sort Logical. Sort the bar chart by total stability? Default
 #'   \code{FALSE} keeps item order.
+#' @param pool For the bar chart: optional named list of variable sets whose
+#'   pathways are drawn as one segment, as in \code{print()}; see
+#'   \code{\link{stabilityPaths-methods}}.
+#' @param type \code{"bars"} (default) for the bar chart, or \code{"effects"}
+#'   for the selection-versus-change scatterplot (ignored when \code{item} is
+#'   given).
+#' @param X For \code{type = "effects"}: which mediator's effects to plot.
+#'   Defaults to the first \code{X}.
+#' @param labels For \code{type = "effects"}: point labels, either a character
+#'   vector (one per item, in item order) or a function applied to the item
+#'   names, e.g. \code{function(i) sub("_role$", "", i)}. Defaults to the item
+#'   names.
 #' @param ... For the path diagram, any of:
 #'   \describe{
 #'     \item{\code{item_label}}{Name written in the Y1 and Y2 nodes; defaults
@@ -167,24 +265,38 @@ print.summary.fancyStability <- function(x, digits = 3, ...) {
 #'     \item{\code{label_cex}, \code{title}}{Node text size; plot title.}
 #'   }
 #'   Latent variables are drawn as ellipses labelled with their reliability.
-#'   For the bar chart, \code{...} is passed to \code{\link[graphics]{plot}}.
+#'   For the effects scatterplot: \code{xlim} and \code{ylim} (axis ranges)
+#'   and \code{title}. The bar chart ignores \code{...}.
 #'
-#' @return Invisibly, the \code{qgraph} object (diagram) or the plotted matrix
-#'   of pathway values (bar chart).
+#' @return The bar chart and effects scatterplot return \pkg{ggplot2} objects,
+#'   which print as the plot and can be modified with \code{+} (e.g. a theme
+#'   or title). The scatterplot's data, each item's selection and change
+#'   effects with p-values, are in its \code{$data}. The path diagram returns
+#'   the \code{qgraph} object invisibly.
 #' @seealso \code{\link{stabilityPaths}}
 #' @examples
-#' d <- stabilityData(stabilitySim$T1, stabilitySim$T2, stabilitySim$experience,
-#'                    keep = "T1", fill = list(leader = 0))
-#' sp <- stabilityPaths(d, X = "leader", controls = "ses",
-#'                      reliability = stabilitySim$reliability)
-#' plot(sp)
-#' plot(sp, what = "share")
-#' plot(sp, item = "dominant")
+#' roles <- c("Powerful_role", "Persuasive_role", "Shy_role")
+#' d <- stabilityData(powerTraits$T1, powerTraits$T2, powerTraits$people,
+#'                    commonItems = c("power", roles))
+#' orgs <- paste0("org", LETTERS[2:7])
+#' d[orgs] <- lapply(LETTERS[2:7], function(o) as.numeric(d$org == o))
+#' sp <- stabilityPaths(d, items = roles, X = "power[T1]",
+#'                      controls = c("tenure", orgs))
+#' plot(sp, pool = list(organization = orgs))
+#' plot(sp, what = "share", pool = list(organization = orgs))
+#' plot(sp, item = "Powerful_role", show_controls = FALSE)
+#' plot(sp, type = "effects", labels = function(i) sub("_role$", "", i))
 #' @export
 #' @importFrom graphics plot rect segments abline axis legend par text
 #' @importFrom grDevices hcl.colors
+#' @importFrom ggplot2 .data
 plot.fancyStability <- function(x, item = NULL, what = c("est", "share"),
-                                sort = FALSE, ...) {
+                                sort = FALSE, pool = NULL,
+                                type = c("bars", "effects"), X = NULL,
+                                labels = NULL, ...) {
+  type <- match.arg(type)
+  if (is.null(item) && type == "effects")
+    return(plotEffects(x, X = X, labels = labels, ...))
   if (!is.null(item)) {
     if (!item %in% names(x$fits))
       stop("No item named \"", item, "\". Items: ",
@@ -195,64 +307,130 @@ plot.fancyStability <- function(x, item = NULL, what = c("est", "share"),
   }
 
   what <- match.arg(what)
-  p <- x$paths
+  p <- poolPaths(x$paths, pool)
   cols  <- pathOrder(p)
   parts <- setdiff(cols, cols[p$type[match(cols, p$path)] == "total"])
   types <- p$type[match(parts, p$path)]
   items <- unique(p$item)
 
-  val <- function(it, pth) {
-    r <- p[p$item == it & p$path == pth, ][1, ]
-    if (what == "share") r$share else r$est
-  }
-  M <- matrix(vapply(items, function(it) vapply(parts, function(pt) val(it, pt),
-                                                numeric(1)),
-                     numeric(length(parts))),
-              nrow = length(parts), dimnames = list(parts, items))
   tot <- vapply(items, function(it) {
     if (what == "share") 1 else p$est[p$item == it & p$type == "total"][1]
   }, numeric(1))
-  if (sort) { o <- order(tot); M <- M[, o, drop = FALSE]; tot <- tot[o] }
+  # first item at the top unless sorted by total stability
+  ord <- if (sort) items[order(tot)] else rev(items)
 
   n_med  <- sum(types == "mediated"); n_conf <- sum(types == "confounded")
   ramp <- function(from, to, k) if (k) grDevices::colorRampPalette(c(from, to))(k)
-  pal <- c("grey80",
+  pal <- c("grey75",
            ramp("#2F6DB5", "#9DC3EA", n_med),    # mediated: blues
            ramp("#D9731E", "#F5C28F", n_conf))   # confounded: oranges
+  names(pal) <- pathLabel(parts)
 
-  adm <- x$summary$admissible[match(colnames(M), x$summary$item)]
-  lbl <- paste0(colnames(M), ifelse(!is.na(adm) & !adm, " !", ""))
+  adm <- x$summary$admissible[match(items, x$summary$item)]
+  lbl <- stats::setNames(paste0(items, ifelse(!is.na(adm) & !adm, " !", "")), items)
 
-  neg <- colSums(pmin(M, 0), na.rm = TRUE); pos <- colSums(pmax(M, 0), na.rm = TRUE)
-  xlim <- range(c(0, neg, pos, tot), na.rm = TRUE)
-  nI <- ncol(M)
+  bars <- p[p$path %in% parts, ]
+  bars$value <- if (what == "share") bars$share else bars$est
+  bars$path  <- factor(pathLabel(bars$path), levels = pathLabel(parts))
+  bars$item  <- factor(bars$item, levels = ord)
+  totals <- data.frame(item = factor(items, levels = ord), value = tot,
+                       mark = "total")
 
-  op <- graphics::par(mar = c(6.5, max(4, max(nchar(lbl)) * 0.55 + 1), 2, 1))
-  on.exit(graphics::par(op), add = TRUE)
-  graphics::plot(NA, xlim = xlim, ylim = c(0.5, nI + 0.5), yaxt = "n",
-                 xlab = if (what == "share") "share of total stability"
-                        else sprintf("stability (%s)", if (x$settings$metric == "std")
-                                     "standardized" else "raw"),
-                 ylab = "", ...)
-  graphics::axis(2, at = seq_len(nI), labels = lbl, las = 1, tick = FALSE)
-  graphics::abline(v = 0, col = "grey40")
-  for (i in seq_len(nI)) {
-    right <- 0; left <- 0
-    for (k in seq_along(parts)) {
-      v <- M[k, i]
-      if (is.na(v)) next
-      if (v >= 0) { graphics::rect(right, i - .35, right + v, i + .35, col = pal[k], border = "white"); right <- right + v }
-      else        { graphics::rect(left + v, i - .35, left, i + .35, col = pal[k], border = "white"); left <- left + v }
-    }
-    if (!is.na(tot[i]))
-      graphics::segments(tot[i], i - .45, tot[i], i + .45, lwd = 2.5)
+  ggplot2::ggplot(bars, ggplot2::aes(x = .data$value, y = .data$item)) +
+    ggplot2::geom_vline(xintercept = 0, colour = "grey40") +
+    ggplot2::geom_col(ggplot2::aes(fill = .data$path), width = .7,
+                      colour = "white", linewidth = .3, na.rm = TRUE,
+                      position = ggplot2::position_stack(reverse = TRUE)) +
+    ggplot2::geom_point(data = totals, ggplot2::aes(shape = .data$mark),
+                        size = 7, na.rm = TRUE) +
+    ggplot2::scale_fill_manual(values = pal, name = NULL) +
+    ggplot2::scale_shape_manual(values = c(total = "|"), name = NULL) +
+    ggplot2::scale_y_discrete(labels = lbl) +
+    ggplot2::labs(x = if (what == "share") "share of total stability"
+                      else sprintf("stability (%s)",
+                                   if (x$settings$metric == "std") "standardized" else "raw"),
+                  y = NULL) +
+    fancyTheme() +
+    ggplot2::theme(legend.position = "bottom",
+                   panel.grid.major.y = ggplot2::element_blank())
+}
+
+# Shared look for the package's ggplot graphics.
+fancyTheme <- function(base_size = 11) {
+  ggplot2::theme_minimal(base_size = base_size) +
+    ggplot2::theme(panel.grid.minor = ggplot2::element_blank(),
+                   panel.border = ggplot2::element_rect(colour = "grey80", fill = NA),
+                   strip.text = ggplot2::element_text(face = "bold"),
+                   plot.title = ggplot2::element_text(face = "bold"))
+}
+
+# Selection (X ~ Y1) vs change (Y2 ~ X) scatterplot, one labelled point per
+# item. Behind plot(x, type = "effects").
+plotEffects <- function(x, X = NULL, labels = NULL, xlim = NULL, ylim = NULL,
+                        title = NULL, ...) {
+  s <- x$settings
+  if (!length(s$X)) stop("`x` has no mediator (X); there are no selection or change effects to plot.")
+  if (is.null(X)) X <- s$X[1]
+  if (!X %in% s$X) stop("`X` must be one of: ", paste(s$X, collapse = ", "))
+
+  e <- effectTable(x)
+  sel <- e[e$effect == "selection" & e$via == X, ]
+  chg <- e[e$effect == "change" & e$via == X, ]
+  items <- s$items
+  adm <- x$status$admissible[match(items, x$status$item)]
+  out <- data.frame(item = items,
+                    selection = sel$est[match(items, sel$item)],
+                    selection_p = sel$pvalue[match(items, sel$item)],
+                    change = chg$est[match(items, chg$item)],
+                    change_p = chg$pvalue[match(items, chg$item)],
+                    admissible = adm, stringsAsFactors = FALSE)
+  lab <- if (is.null(labels)) items
+         else if (is.function(labels)) labels(items)
+         else as.character(labels)
+  if (length(lab) != length(items)) stop("`labels` must give one label per item.")
+
+  show <- !is.na(out$selection) & !is.na(out$change) & (is.na(adm) | adm)
+  if (any(!show))
+    message("Not plotted (not estimated or inadmissible): ",
+            paste(items[!show], collapse = ", "))
+
+  out$label <- lab
+  d <- out[show, ]
+  sig_lv <- c("p < .05", "p ≥ .05")
+  selSig <- !is.na(d$selection_p) & d$selection_p < .05
+  chgSig <- !is.na(d$change_p) & d$change_p < .05
+  # outline shows the selection effect (black vs light grey); fill shows the
+  # change effect (filled in the outline colour vs white)
+  d$selKey  <- factor(ifelse(selSig, sig_lv[1], sig_lv[2]), levels = sig_lv)
+  d$fillKey <- factor(ifelse(!chgSig, "ns", ifelse(selSig, "sigDark", "sigLight")),
+                      levels = c("sigDark", "sigLight", "ns"))
+  dark <- "black"; light <- "grey65"
+
+  g <- ggplot2::ggplot(d, ggplot2::aes(x = .data$selection, y = .data$change)) +
+    ggplot2::geom_hline(yintercept = 0, colour = "grey60", linetype = 2) +
+    ggplot2::geom_vline(xintercept = 0, colour = "grey60", linetype = 2) +
+    ggplot2::geom_point(ggplot2::aes(colour = .data$selKey, fill = .data$fillKey),
+                        shape = 21, size = 2.6, stroke = 1) +
+    ggplot2::scale_colour_manual(
+      values = stats::setNames(c(dark, light), sig_lv), limits = sig_lv,
+      name = "selection effect",
+      guide = ggplot2::guide_legend(order = 1, override.aes = list(fill = "white"))) +
+    ggplot2::scale_fill_manual(
+      values = c(sigDark = dark, sigLight = light, ns = "white"),
+      limits = c("sigDark", "sigLight", "ns"), breaks = c("sigDark", "ns"),
+      labels = sig_lv, name = "change effect",
+      guide = ggplot2::guide_legend(order = 2, override.aes = list(colour = dark)))
+  g <- g + if (requireNamespace("ggrepel", quietly = TRUE)) {
+    ggrepel::geom_text_repel(ggplot2::aes(label = .data$label), size = 3,
+                             max.overlaps = Inf, seed = 1, min.segment.length = .3,
+                             segment.colour = "grey70", segment.size = .3,
+                             box.padding = .25, point.padding = .15)
+  } else {
+    ggplot2::geom_text(ggplot2::aes(label = .data$label), size = 3, vjust = -.8)
   }
-  # legend in the bottom margin, below the axis title
-  usr <- graphics::par("usr")
-  graphics::legend(x = mean(usr[1:2]), y = usr[3] - 0.12 * (usr[4] - usr[3]),
-                   xjust = 0.5, yjust = 1, xpd = NA, horiz = TRUE, bty = "n",
-                   fill = c(pal, NA), border = c(rep("white", length(pal)), NA),
-                   lty = c(rep(NA, length(pal)), 1), lwd = c(rep(NA, length(pal)), 2.5),
-                   legend = c(pathLabel(parts), "total"), cex = 0.9)
-  invisible(M)
+  g + ggplot2::coord_cartesian(xlim = xlim, ylim = ylim) +
+    ggplot2::labs(x = paste0("Selection effects (", X, " ~ Y1)"),
+                  y = paste0("Change effects (Y2 ~ ", X, ")"), title = title) +
+    fancyTheme() +
+    ggplot2::theme(legend.position = "bottom")
 }

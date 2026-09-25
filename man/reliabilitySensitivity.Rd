@@ -2,12 +2,22 @@
 % Please edit documentation in R/reliabilitySensitivity.R
 \name{reliabilitySensitivity}
 \alias{reliabilitySensitivity}
+\alias{print.fancyStabilitySensitivity}
 \alias{plot.fancyStabilitySensitivity}
-\title{How Much Does a Stability Decomposition Depend on the Assumed Reliability?}
+\title{How Much Do Stability Results Depend on the Modeled Reliability?}
 \usage{
 reliabilitySensitivity(x, rel = seq(0.5, 1, 0.1), items = x$settings$items)
 
-\method{plot}{fancyStabilitySensitivity}(x, what = c("share", "est"), ...)
+\method{print}{fancyStabilitySensitivity}(x, digits = 2, ...)
+
+\method{plot}{fancyStabilitySensitivity}(
+  x,
+  what = c("effects", "est", "share"),
+  effects = c("selection", "change"),
+  show_controls = FALSE,
+  pool = NULL,
+  ...
+)
 }
 \arguments{
 \item{x}{A \code{fancyStability} object from \code{\link{stabilityPaths}}.}
@@ -17,29 +27,73 @@ to \code{seq(.5, 1, .1)}.}
 
 \item{items}{Items to include. Defaults to all items in \code{x}.}
 
-\item{what}{\code{"share"} (default) or \code{"est"}: which quantity to plot.}
+\item{digits}{Number of decimal places to print.}
 
-\item{...}{Passed to \code{\link[graphics]{matplot}}.}
+\item{...}{Not used.}
+
+\item{what}{What to plot: \code{"effects"} (default) draws the structural
+effects with 95\% confidence intervals, filled where p < .05;
+\code{"est"} or \code{"share"} draw the stability decomposition's
+pathway estimates or their shares of the total.}
+
+\item{effects}{For \code{what = "effects"}: which effects to draw, any of
+\code{"selection"} (default), \code{"change"} (default),
+\code{"stability"} and \code{"control"}. One panel per effect and
+mediator (or control).}
+
+\item{show_controls}{For \code{what = "est"} or \code{"share"}: draw a panel
+for each control's (confounded) pathway? Default \code{FALSE}.}
+
+\item{pool}{With \code{show_controls = TRUE}, an optional named list of
+control sets to draw as one panel, e.g.
+\code{list(organization = c("orgB", "orgC"))}; see
+\code{\link{stabilityPaths-methods}}.}
 }
 \value{
-A data frame of class \code{fancyStabilitySensitivity}, one row per
-  reliability per item per pathway, with columns \code{reliability},
-  \code{item}, \code{path}, \code{type}, \code{est}, \code{se},
-  \code{share}, and \code{admissible}. Its \code{plot()} method draws one
-  panel per pathway type, with a line per item.
+An object of class \code{fancyStabilitySensitivity}: a list with
+\item{effects}{Data frame, one row per reliability per item per effect:
+  \code{reliability}, \code{item}, \code{effect} (\code{"selection"},
+  \code{"change"}, \code{"stability"} or \code{"control"}), \code{via}
+  (the \code{X} or control involved), \code{path}, \code{est}, \code{se},
+  \code{pvalue}, \code{ci.lower}, \code{ci.upper}, and \code{admissible}.}
+\item{paths}{Data frame of the decomposition at each reliability:
+  \code{reliability}, \code{item}, \code{path}, \code{type}, \code{est},
+  \code{se}, \code{share}, and \code{admissible}.}
+\item{metric}{The metric of the estimates (\code{"std"} or \code{"raw"}).}
+
+\code{print()} tabulates the selection and change effects across the grid.
+\code{plot()} draws them by default (see the arguments below), or the
+decomposition with \code{what = "est"} or \code{"share"}. It returns a
+\pkg{ggplot2} object, which prints as the plot and can be modified with
+\code{+}.
 }
 \description{
 Refits a \code{\link{stabilityPaths}} analysis over a grid of item
-reliabilities and collects the decomposition at each value. A reliability of
-1 is the unadjusted (observed-variable) analysis, so the grid shows how the
-conclusions move as single answers are treated as less closely tied to the
-expected score they are adjusted toward.
+reliabilities and collects, at each value, the structural effects (e.g. the
+selection and change effects of an experience, with their standard errors
+and p-values) and the stability decomposition. A reliability of 1 is the
+unadjusted (observed-variable) analysis, so the grid shows how the results
+move as single answers are treated as less closely tied to the expected
+score they are adjusted toward.
 }
 \details{
 At each grid value, every item gets that reliability at both waves. Any
 reliabilities supplied for \code{X} or \code{controls} variables in the
 original analysis are kept fixed. Everything else -- items, mediators,
 controls, metric, missing-data handling -- is taken from \code{x}.
+
+The effects reported for each item are:
+\describe{
+  \item{selection}{\code{X ~ Y1}: how the Time 1 item predicts each
+    experience or mediator \code{X}.}
+  \item{change}{\code{Y2 ~ X}: how \code{X} predicts the Time 2 item,
+    controlling for the Time 1 item, i.e. its prediction of change.}
+  \item{stability}{\code{Y2 ~ Y1}: the residual stability path.}
+  \item{control}{\code{Y2 ~ C}: how each control predicts the Time 2 item.}
+}
+Modeling the items as less reliable controls more completely for where
+people usually stand at Time 1, so a change effect that survives low
+modeled reliabilities is harder to attribute to incomplete control.
 
 Grid values below an item's retest correlation typically give inadmissible
 solutions (adjusted stability above 1); these rows are kept but flagged
@@ -52,13 +106,14 @@ weeks. See the "Choosing a reliability" section of
 same-session or very short one.
 }
 \examples{
-d <- stabilityData(stabilitySim$T1, stabilitySim$T2, stabilitySim$experience,
-                   keep = "T1", fill = list(leader = 0))
-sp <- stabilityPaths(d, items = c("dominant", "anxious"), X = "leader",
-                     controls = "ses")
-sens <- reliabilitySensitivity(sp, rel = c(.7, .85, 1))
-head(sens)
+d <- stabilityData(powerTraits$T1, powerTraits$T2, powerTraits$people,
+                   commonItems = c("power", "communion", "agency"))
+sp <- stabilityPaths(d, items = c("communion", "agency"),
+                     X = "power[T1]", controls = "tenure")
+sens <- reliabilitySensitivity(sp, rel = c(.6, .8, 1))
+sens
 plot(sens)
+plot(sens, what = "est")
 
 }
 \seealso{

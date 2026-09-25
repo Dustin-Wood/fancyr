@@ -1,0 +1,599 @@
+---
+title: "Stability decomposition: traits and social power"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Stability decomposition: traits and social power}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 7,
+                      fig.height = 4.5, out.width = "100%",
+                      dev = if (requireNamespace("ragg", quietly = TRUE)) "ragg_png" else "png",
+                      dpi = 96, fig.retina = 2)
+```
+
+```{r setup}
+library(fancyr)
+```
+
+## The question
+
+People who are high on a trait at one time tend to be high on it later. That
+**stability** can come about in several ways. One of them runs through
+experience: a trait can lead people into certain experiences (*selection*),
+and those experiences can then reinforce the same trait (*socialization*).
+Roberts, Caspi and Moffitt (2003) called this the *corresponsive principle*.
+When it holds, part of a trait's continuity is carried by the experiences
+people select into.
+
+`stabilityPaths()` estimates that part directly. For each item measured at two
+waves, it splits the total stability coefficient -- the prediction of Time 2
+scores from Time 1 scores -- into additive pieces:
+
+| pathway | route | meaning |
+|---|---|---|
+| **mediated** | `Y1 -> X -> Y2` | stability carried by an experience X: selection × socialization |
+| **confounded** | `Y1 <-> C -> Y2` | stability due to a third variable C |
+| **residual** | `Y1 -> Y2` | stability not accounted for by either |
+
+The pieces add up to the total exactly. Dividing each by the total gives its
+**share** of the item's stability.
+
+## The study
+
+This vignette works through the study behind Wood and Harms (2017). Members of
+seven fraternities and sororities were surveyed twice, about a year apart. At
+each wave they described themselves on 59 trait adjectives, twice over: once
+as they see themselves **in general** (their *general identity*), and once as
+they see themselves **as a member of their organization** (their *role
+identity*). They also rated how much influence every member they knew had
+within the organization. A person's **social power** is the average of the
+influence ratings they received, typically from 20 to 50 other members, so it
+is a very dependable estimate.
+
+Wood and Harms asked two questions about traits and power over time:
+
+| path | question | model |
+|---|---|---|
+| **A** | Do traits predict *changes* in power? | Time 2 power on Time 1 trait, controlling for Time 1 power |
+| **B** | Does power predict *changes* in traits? | Time 2 trait on Time 1 power, controlling for Time 1 trait |
+
+The answer was that the two directions differ: the relationship is
+*non-corresponsive*. Communal traits predicted gains in power (Path A), while
+power predicted gains in agentic role identities, such as seeing oneself as
+powerful and not shy (Path B).
+
+Both questions are stability decompositions:
+
+- **Path B.** Treat power as the "experience". Members who see themselves as,
+  say, powerful tend to *have* power (selection), and power predicts how they
+  see themselves a year later (socialization, which is Path B). The product
+  is the part of the trait's stability that runs through power: the mediated
+  pathway, with `X = "power[T1]"`.
+- **Path A.** The roles swap. Power is the item, and a trait measured at
+  Time 1 is a control. The trait's link to Time 2 power, controlling for
+  Time 1 power, is Path A.
+
+## The data
+
+`powerTraits` is a list. `T1` and `T2` hold each wave's data, one row per
+person, including the survey `date`. `people` holds fixed information about
+each person. `items` gives the agency and communion content of each
+adjective, as rated by judges.
+
+```{r}
+str(powerTraits, max.level = 1)
+powerTraits$T1[1:3, 1:8]
+head(powerTraits$people, 3)
+```
+
+Each wave has `power`, the 59 general-identity adjectives (`Kind`,
+`Dominant`, ...), the same adjectives as role identities (`Kind_role`, ...),
+and four profile scores: `communion`, `agency`, `communion_role` and
+`agency_role`. A profile score is the within-person correlation between a
+person's ratings on the 59 adjectives and the adjectives' communion (or
+agency) content. It is high for someone who endorses communal adjectives and
+rejects uncommunal ones. See `?powerTraits` for details.
+
+`stabilityData()` puts the pieces together. Items measured at both waves,
+named in `commonItems`, get `[T1]` and `[T2]` suffixes. Other columns found in
+only one wave are dropped by default, with a message; `keep = "T1"` or
+`keep = "all"` retain them. Further files, such as `people`, are joined on the
+ID. Given the name of a date column, `stabilityData()` also computes each
+person's `interval_days`.
+
+```{r}
+pt <- powerTraits
+adj <- pt$items$item
+d <- stabilityData(pt$T1, pt$T2, pt$people, date = "date",
+                   commonItems = c("power", "communion", "agency",
+                                   "communion_role", "agency_role",
+                                   adj, paste0(adj, "_role")))
+summary(d$interval_days)
+```
+
+Organizations were surveyed on different schedules, so the interval between
+waves ranges from about 11 to 18 months.
+
+### Who is in the sample?
+
+About half the Time 1 participants never answered the Time 2 survey, mostly
+because seniors graduated. By default, `stabilityData()` **keeps** them:
+
+```{r}
+c(everyone = nrow(d),
+  selfRatingsBothWaves = sum(!is.na(d[["communion[T1]"]]) &
+                             !is.na(d[["communion[T2]"]])))
+```
+
+That's deliberate. `stabilityPaths()` estimates its models by *full
+information maximum likelihood* (FIML), which uses every value each person
+has. Someone seen only at Time 1 still tells us about the Time 1 distribution
+and about how Time 1 scores relate to power and the controls. Here that
+matters doubly, because power comes from other members' ratings: many people
+who skipped the Time 2 survey still have Time 2 power.
+
+Dropping incomplete cases (listwise deletion, `join = "inner"`) is unbiased
+only if dropout is *missing completely at random*: unrelated to anything,
+measured or not. FIML only needs dropout to be *missing at random*: it may
+depend on observed things like Time 1 scores, as long as it doesn't further
+depend on the unobserved Time 2 score itself (Rubin, 1976; Schafer & Graham,
+2002; Enders, 2010). The *Missing data* section of `?stabilityData` has more
+detail and references.
+
+### Controls: organization and tenure
+
+Organizations differ in their average power and in how their members see
+themselves, and Wood and Harms controlled for organization in every analysis
+with dummy codes. We do the same: six indicator variables, with organization A
+as the reference, join the controls, along with `tenure`, the years a person
+had been a member at Time 1.
+
+```{r}
+orgs <- paste0("org", LETTERS[2:7])
+d[orgs] <- lapply(LETTERS[2:7], function(o) as.numeric(d$org == o))
+ctrl <- c("tenure", orgs)
+```
+
+Organizations are single-sex, so the dummies also control for gender. Each
+dummy is an ordinary control with its own confounded pathway. To keep the
+printed tables readable, `print()` and `plot()` can combine them with
+`pool = list(organization = orgs)`. This affects the display only: the model,
+its degrees of freedom and `summary()` are unchanged, and because pathways
+add, the combined column still sums with the others to the total.
+
+## A first decomposition: power and role identities (Path B)
+
+We start with role identities that Wood and Harms found to be related to
+power, plus `Relaxed_role`, which will make a point below:
+
+```{r}
+roleItems <- c("Powerful_role", "Persuasive_role", "Assertive_role",
+               "Shy_role", "Relaxed_role")
+obs <- stabilityPaths(d, items = roleItems, X = "power[T1]", controls = ctrl)
+print(obs, pool = list(organization = orgs))
+```
+
+Each cell is an estimate, followed by its share of the item's total
+stability. In the standardized metric (the default), the total is the retest
+correlation, here over about a year.
+
+For `Powerful_role`, about a quarter of the item's stability runs through
+power. Members who saw themselves as powerful in their organization had more
+power at Time 1, and having power predicted seeing themselves as still more
+powerful a year later. `Shy_role` shows the same pattern in reverse.
+
+Power is measured at Time 1, at the same time as the Time 1 self-ratings,
+rather than between the waves. The mediated pathway therefore treats a
+concurrent association as selection: the direction of that first link is
+assumed, not observed (see the cautions at the end).
+
+## Reading the results
+
+`summary()` adds standard errors, confidence intervals and p-values. It also
+shows the two structural paths whose product *is* each mediated pathway:
+selection (`power[T1] ~ Y1`) and socialization (`Y2 ~ power[T1]`, which is
+Path B).
+
+```{r}
+s <- summary(obs)
+s$structural
+```
+
+The `Relaxed_role` row shows why the decomposition says more than the
+socialization effect alone. Power clearly *changes* how relaxed people feel in
+their role: a sizeable negative `Y2 ~ power[T1]`. Yet power carries none of
+that item's stability, because how relaxed people were played no part in who
+had power. With no selection, there is nothing for the socialization effect
+to multiply. This is non-corresponsiveness in the sense of Wood and Harms:
+the experience changes a trait that didn't select people into it, so it adds
+nothing to that trait's continuity.
+
+Does power affect general identities the same way? Role experiences should
+affect role identities first (Wood & Roberts, 2006):
+
+```{r}
+genItems <- sub("_role$", "", roleItems)
+gen <- stabilityPaths(d, items = genItems, X = "power[T1]", controls = ctrl)
+data.frame(adjective = genItems,
+           role      = round(s$structural[["Y2 ~ power[T1]"]], 3),
+           general   = round(summary(gen)$structural[["Y2 ~ power[T1]"]], 3))
+```
+
+Except for `Persuasive`, the effects of power are much weaker on how people
+see themselves in general.
+
+## Plots
+
+With no arguments, `plot()` compares items. Each bar is an item's total
+stability, divided into its pathways:
+
+```{r}
+plot(obs, pool = list(organization = orgs))
+```
+
+With `item`, it draws that item's path diagram. `show_controls = FALSE` leaves
+the controls out of the drawing; the estimates are still adjusted for them.
+
+```{r, fig.height = 5}
+plot(obs, item = "Powerful_role", show_controls = FALSE)
+```
+
+## Adjusting for retest reliability
+
+These are single items, and a single answer reflects the particular occasion
+as well as where the person usually stands. That matters here in a specific
+way. The model asks whether power predicts Time 2 self-ratings *over and
+above* Time 1 self-ratings. A single Time 1 answer only partly controls for
+the person's expected score around Time 1. The rest of that expected score
+can be credited to power, whenever power is related to it, which inflates the
+socialization path and with it the mediated share. Occasion-specific
+influences at either wave also weaken the retest correlation. Wood and Harms
+raised exactly this concern about their Path B estimates.
+
+If you know an item's reliability, ideally a retest correlation over a few
+weeks (see *Choosing a reliability* below), supply it. Each item is then
+modelled as a latent variable measured with that reliability. We have no
+short-interval retest correlations for these adjectives, so we use .75 as a
+middle value and check a range below. Power gets its own value: because it
+averages many raters, the reliability of each person's average is about .93
+(the mean across organizations, estimated from how much raters agreed).
+
+```{r}
+rel <- c(setNames(rep(.75, length(roleItems)), roleItems), "power[T1]" = .93)
+lat <- stabilityPaths(d, items = roleItems, X = "power[T1]", controls = ctrl,
+                      reliability = rel)
+print(lat, pool = list(organization = orgs))
+```
+
+Latent items are drawn as ellipses in the path diagram, labelled with the
+reliability modeled. The total is now the stability of the *expected scores*
+(the retest correlation adjusted for the items' reliabilities), and the
+components still sum to it exactly.
+
+```{r}
+data.frame(item     = roleItems,
+           observed = round(s$structural[["Y2 ~ power[T1]"]], 3),
+           latent   = round(summary(lat)$structural[["Y2 ~ power[T1]"]], 3))
+```
+
+Here, the concern doesn't materialize: the socialization paths change little.
+Two adjustments pull in opposite directions. Modelling the Time 1 self-rating
+as a latent variable controls more completely for where people usually
+stand, which shrinks the path. Modelling power as a latent variable
+strengthens its estimated effect. For these items the two roughly cancel. The
+totals rise, as they should once occasion-specific influences are set aside.
+
+## Choosing a reliability
+
+An item given a reliability stands for the person's *expected score* on it
+over some interval *t*: roughly, the average of the answers they would give if
+asked repeatedly across that span. Nothing assumes the expected score is
+fixed. It can change between the waves, which is exactly what the model
+studies. The reliability to supply is the share of variance in a single
+answer that is shared with the expected score over *t*.
+
+A retest correlation over an interval of about *t* estimates this directly
+(Wood et al., 2023). Whatever contributes to both answers, meaning whatever
+persists over *t*, is part of the expected score. Influences that come and go
+within *t*, such as mood, the day's circumstances, or remembering an answer
+given a moment ago, still shape each answer systematically. They just aren't
+part of the expected score over *t*. As *t* stretches from an hour to a day,
+a week, a month or a year, more of what lies behind an answer has the chance
+to change, and retest correlations fall (Watson, 2004).
+
+So choosing *t* decides what the adjusted results describe:
+
+- **Short *t*.** With a same-session retest, or one a few days or a week
+  apart, nearly everything behind an answer persists. The reliability is high
+  and the adjustment small, and the adjusted stability still describes scores
+  tied to the particular occasion.
+- **Long *t*.** As *t* approaches the gap between the waves, the change the
+  model is meant to study gets folded into the reliability, and the
+  adjustment does too much. If you use the Time 1–Time 2 retest correlation
+  itself, the adjusted stability is 1 by construction.
+- **In between.** Long enough that what is specific to an occasion has turned
+  over, but short relative to the interval being studied. For waves a year
+  apart, retest correlations over two to four weeks are a reasonable target.
+
+Internal consistency (alpha) fits the same logic, because its items are
+answered at different moments too, typically about a minute apart. Alpha is
+often called an underestimate of reliability. What it underestimates is the
+retest reliability of those items *over that short interval*. If two items
+answered about a minute apart give an alpha of .80, each item's own retest
+correlation over a minute (averaged, say, as a geometric mean) should exceed
+.80. Over longer intervals such as two weeks, observed retest correlations are
+regularly *lower* than alpha (McCrae et al., 2011; Chmielewski & Watson,
+2009). So alpha isn't a suitable value for waves months or years apart, and a
+single item has no alpha anyway.
+
+The reliability of power is a different kind of number. It describes how
+much a person's average would change with a different set of raters, not
+with a different occasion. Over a few weeks, few members' power is likely to
+shift much, so it serves as a reasonable approximation here, but the two
+quantities are not the same.
+
+Suitable retest values often don't exist for the items you have. Published
+retest correlations for similar items or measures can suggest a range, and
+the sensitivity analysis below shows whether the conclusions hold across it.
+
+## How much does the modeled reliability matter?
+
+Standard errors treat the supplied reliability as known, but it's an estimate
+too, and conclusions can depend on it. Often the question is not how
+stability divides into shares, but whether the effects behind it -- the
+selection effect (`X ~ Y1`) and the change effect (`Y2 ~ X`) -- are sizeable
+and significant, and whether they stay that way as the items are modeled as
+less reliable. `reliabilitySensitivity()` refits the analysis across a grid
+of reliabilities for the items, keeping power's value fixed, and records
+these effects with their standard errors at each value. A value of 1 is the
+analysis without adjusting the items.
+
+We apply it to the measures Wood and Harms emphasized: the communion and
+agency profiles of people's general and role identities. The unadjusted
+change effects are this analysis's version of Path B in their Table 1.
+
+```{r}
+profiles <- c("communion", "agency", "communion_role", "agency_role")
+prof <- stabilityPaths(d, items = profiles, X = "power[T1]", controls = ctrl,
+                       reliability = c("power[T1]" = .93))
+sens <- reliabilitySensitivity(prof, rel = seq(.7, 1, .1))
+sens
+```
+
+```{r, fig.width = 8, fig.height = 4.5}
+plot(sens)
+```
+
+Filled points have p < .05, and bars are 95% confidence intervals. Without
+adjustment (reliability 1), power predicts no significant change in any
+profile. The largest change effect is for the agency of role identities,
+about .11, the same value Wood and Harms reported for this path. Selection
+effects, the concurrent link between a profile and power, are significant
+throughout and grow as the profiles are modeled as less reliable. The change
+effects instead shrink toward zero. So the conclusion that power does not
+change people's overall agency or communion holds up, and becomes firmer,
+under adjustment.
+
+The profile scores are quite stable over the year (retest correlations near
+.6), and modeled reliabilities of .5 or .6 give inadmissible solutions
+(adjusted stability above 1). That is why the grid starts at .7: an
+inadmissible value is itself a useful bound on what reliability is plausible.
+
+## Selection and change effects across all adjectives
+
+Profiles summarize many adjectives at once. To see the adjectives
+individually, `plot(type = "effects")` places each item by its selection
+effect (horizontal) and change effect (vertical). Here are all 59 role
+identities, first without adjustment, then modeling each adjective's
+reliability as .70:
+
+```{r}
+roleAll <- paste0(adj, "_role")
+effObs <- stabilityPaths(d, items = roleAll, X = "power[T1]", controls = ctrl)
+effLat <- stabilityPaths(d, items = roleAll, X = "power[T1]", controls = ctrl,
+                         reliability = c(setNames(rep(.7, length(roleAll)), roleAll),
+                                         "power[T1]" = .93))
+eff <- function(x, col) summary(x)$structural[[col]]
+xl <- range(0, eff(effObs, "power[T1] ~ Y1"), eff(effLat, "power[T1] ~ Y1")) * 1.1
+yl <- range(0, eff(effObs, "Y2 ~ power[T1]"), eff(effLat, "Y2 ~ power[T1]")) * 1.1
+shortName <- function(i) sub("_role$", "", i)
+```
+
+```{r, fig.height = 6.5}
+plot(effObs, type = "effects", labels = shortName, xlim = xl, ylim = yl,
+     title = "No reliability adjustment")
+```
+
+```{r, fig.height = 6.5}
+plot(effLat, type = "effects", labels = shortName, xlim = xl, ylim = yl,
+     title = "Modeled reliability of .70 for each adjective")
+```
+
+A point's fill shows its change effect (filled if p < .05, white otherwise),
+and its outline shows its selection effect (black if p < .05, light gray
+otherwise). So filled black points have both effects significant, and filled
+gray points a significant change effect without selection. Points in the upper-right and
+lower-left quadrants have selection and change effects of the same sign: the
+relationship is *corresponsive* (Roberts, Caspi, & Moffitt, 2003). Members
+high on the trait have more power, and power moves them further in the same
+direction. Without adjustment, 16 adjectives show a significant change
+effect, and the points rise along a diagonal: agentic and extraverted
+adjectives such as *powerful*, *persuasive*, *dominant* and *extraverted* sit
+at the upper right, and *shy*, *quiet* and *introverted* at the lower left.
+Every adjective with a sizeable effect in both directions has them in the same
+direction. A few adjectives, such as *relaxed*, *careless* and *unemotional*,
+sit near the vertical axis: power predicts change in them without having
+selected on them, as with `Relaxed_role` above.
+
+At a modeled reliability of .70, the selection effects spread out, as
+adjusted concurrent associations should, but only six change effects remain
+significant: *powerful*, *shy* and *trustful*, plus *careless*, *relaxed* and
+*unemotional*. Much of the evidence that power changes agentic role identities
+rests on how completely Time 1 standing is controlled. *Powerful* and *shy*
+are the robust cases.
+
+Note that selection here is the *concurrent* association of a trait with
+power. The non-correspondence Wood and Harms described contrasts Path B with
+Path A, the traits that predict *gaining* power, which the next section takes
+up.
+
+## Do traits change power? (Path A)
+
+Now power is the item, and a Time 1 trait is a control. Wood and Harms focused
+on the overall communion and agency of people's trait profiles. A small
+helper pulls out a control's cross-lagged coefficient, `Y2 ~ C`, from the
+fitted models:
+
+```{r}
+crossPath <- function(x, from) {
+  cf <- x$coefficients
+  cf <- cf[cf$op == "~" & cf$rhs == from & cf$lhs == paste0(cf$item, "[T2]"),
+           c("item", "est", "se", "pvalue")]
+  cf[c("est", "se", "pvalue")] <- lapply(cf[c("est", "se", "pvalue")], round, 3)
+  rownames(cf) <- NULL
+  cf
+}
+pAc <- stabilityPaths(d, items = "power", controls = c("communion[T1]", ctrl))
+pAa <- stabilityPaths(d, items = "power", controls = c("agency[T1]", ctrl))
+print(pAc, pool = list(organization = orgs))
+rbind(crossPath(pAc, "communion[T1]"), crossPath(pAa, "agency[T1]"))
+```
+
+Communion predicts gains in power (Wood and Harms reported a partial
+correlation of .20). Agency, despite being the stronger *concurrent* correlate
+of power, predicts gains more weakly (.08 in the paper). This is the
+non-corresponsive pattern: the traits power seems to foster are not the ones
+that earn it.
+
+The communion route carries only a small share of power's stability. Path A is
+clearly positive, but communion and power are only modestly related at Time 1,
+and the pathway is the product of the two links. A trait can predict *change*
+in power without accounting for much of power's *continuity*.
+
+Tenure is also informative. Its pathway is negative: longer-serving members
+had more power at Time 1 but tended to lose some of it over the year, as
+seniors made way for the next cohort.
+
+Profile communion and agency are highly correlated (about .8), because many
+adjectives are desirable in both senses. Entering both at once asks which one
+matters once the other is held constant:
+
+```{r}
+pAboth <- stabilityPaths(d, items = "power",
+                         controls = c("communion[T1]", "agency[T1]", ctrl))
+rbind(crossPath(pAboth, "communion[T1]"), crossPath(pAboth, "agency[T1]"))
+```
+
+Communion carries the effect. Holding communion constant, agency, if
+anything, predicts *losing* power. This matches the lower half of Wood and
+Harms's Table 1. Because the two profiles overlap so heavily, these
+coefficients have larger standard errors than either profile alone.
+
+## How much do organizations B and D matter?
+
+Two organizations have a problem with how IDs link records. In organization D,
+the IDs on Time 1 surveys don't appear to match the IDs of the same people on
+the Time 1 influence roster. In organization B, roster IDs don't appear to
+refer to the same people at the two waves. The evidence is summarized in
+`?powerTraits`; `people$linkageIssue` flags both organizations.
+
+Both were included in the published analyses, and including them reproduces
+the published results closely. Refitting without them shows how much the
+conclusions depend on them. Without B and D, their dummies are all zero, so
+they leave the controls:
+
+```{r}
+dBD <- d[!d$linkageIssue, ]
+ctrlBD <- setdiff(ctrl, c("orgB", "orgD"))
+keyPaths <- function(dat, ctrl) {
+  a_c <- stabilityPaths(dat, items = "power", controls = c("communion[T1]", ctrl))
+  a_a <- stabilityPaths(dat, items = "power", controls = c("agency[T1]", ctrl))
+  b   <- stabilityPaths(dat, items = c("Powerful_role", "Shy_role"),
+                        X = "power[T1]", controls = ctrl)
+  c(`A: communion -> power` = crossPath(a_c, "communion[T1]")$est,
+    `A: agency -> power`    = crossPath(a_a, "agency[T1]")$est,
+    setNames(summary(b)$structural[["Y2 ~ power[T1]"]],
+             paste("B: power ->", c("Powerful_role", "Shy_role"))))
+}
+round(cbind(allOrganizations = keyPaths(d, ctrl),
+            withoutBandD     = keyPaths(dBD, ctrlBD)), 3)
+```
+
+Without B and D, Path B for the role identities holds up. Path A for
+communion is weaker and less certain in the smaller sample. Whether B and D
+should be kept depends on whether their ID links can be verified; until then,
+it is worth reporting results both ways.
+
+## Interpreting shares, and some cautions
+
+- **Shares are shares of stability**, not of variance in Time 2 scores. A
+  small mediated share can still reflect a large effect of the experience
+  when selection is weak, as `Relaxed_role` shows.
+- **Timing.** The mediated pathway treats the experience as coming between
+  the waves. Here power was measured at Time 1, alongside the Time 1
+  self-ratings, so the direction of the selection link is assumed rather than
+  observed (Maxwell & Cole, 2007). The same applies whenever an experience is
+  measured at Time 2 or spans the whole interval.
+- **Unmeasured confounding.** Controls address only the confounders you
+  measure. A stable variable left out of `controls` inflates both the
+  socialization path and the residual path.
+- **Totals near zero** make shares unstable. Read shares alongside the
+  estimates.
+- **Binary experiences**, such as whether someone held an office, should not
+  be given a reliability: a record of whether something happened isn't one
+  answer sampled from a range of answers a person might give.
+
+## Toward cross-lagged models
+
+Paths A and B are the two cross-lagged paths of a two-wave cross-lagged panel
+model, and the two decompositions above are its two halves. Here each
+direction was fitted separately, one trait at a time. A dedicated
+cross-lagged model would fit both directions together. It would give both
+decompositions from one set of estimates, and it could also split the Time 2
+association between a trait and power into what carries over from Time 1,
+what the cross-lagged paths produce, and change that the two share.
+
+## References
+
+Chmielewski, M., & Watson, D. (2009). What is being assessed and why it
+matters: The impact of transient error on trait research. *Journal of
+Personality and Social Psychology, 97*(1), 186--202.
+
+Enders, C. K. (2010). *Applied missing data analysis*. Guilford Press.
+
+Maxwell, S. E., & Cole, D. A. (2007). Bias in cross-sectional analyses of
+longitudinal mediation. *Psychological Methods, 12*(1), 23--44.
+
+McCrae, R. R., Kurtz, J. E., Yamagata, S., & Terracciano, A. (2011).
+Internal consistency, retest reliability, and their implications for
+personality scale validity. *Personality and Social Psychology Review,
+15*(1), 28--50.
+
+Roberts, B. W., Caspi, A., & Moffitt, T. E. (2003). Work experiences and
+personality development in young adulthood. *Journal of Personality and Social
+Psychology, 84*(3), 582--593.
+
+Rubin, D. B. (1976). Inference and missing data. *Biometrika, 63*(3), 581--592.
+
+Schafer, J. L., & Graham, J. W. (2002). Missing data: Our view of the state of
+the art. *Psychological Methods, 7*(2), 147--177.
+
+Watson, D. (2004). Stability versus change, dependability versus error:
+Issues in the assessment of personality over time. *Journal of Research in
+Personality, 38*(4), 319--350.
+
+Wood, D., & Harms, P. D. (2017). Evidence of non-corresponsive causal
+relationships between personality traits and social power over time.
+*Personality and Social Psychology Bulletin, 43*(1), 33--45.
+
+Wood, D., Lowman, G. H., Armstrong, B. F., III, & Harms, P. D. (2023). Using
+retest-adjusted correlations as indicators of the semantic similarity of
+items. *Journal of Personality and Social Psychology, 125*(2), 437--454.
+https://doi.org/10.1037/pspp0000441
+
+Wood, D., & Roberts, B. W. (2006). Cross-sectional and longitudinal tests of
+the Personality and Role Identity Structural Model (PRISM). *Journal of
+Personality, 74*(3), 779--809.

@@ -1,5 +1,30 @@
 # fancyr (development)
 
+## Real data: traits and social power
+
+* New dataset `powerTraits`: two waves of general- and role-identity ratings
+  on 59 trait adjectives, plus peer-rated social power and survey dates, from
+  seven fraternities and sororities (Wood & Harms, 2017).
+* New vignette on these data: `vignette("traits-and-power")`.
+* `print()` and `plot()` for `stabilityPaths()` results gain `pool`, which
+  shows the pathways of a set of controls (e.g. dummy codes) as one column.
+  This affects the display only.
+* `reliabilitySensitivity()` now also records the structural effects at each
+  modeled reliability: selection (`X ~ Y1`), change (`Y2 ~ X`), residual
+  stability and control effects, each with standard errors, p-values and
+  confidence intervals. It returns a list (`$effects`, `$paths`). `print()`
+  tabulates the selection and change effects, and `plot()` draws them with
+  confidence intervals by default. The decomposition is still available with
+  `what = "est"` or `"share"`, which leave out control pathways unless
+  `show_controls = TRUE`.
+* `plot(x, type = "effects")` for `stabilityPaths()` results draws each item's
+  selection effect against its change effect, labelled by item (with
+  non-overlapping labels when ggrepel is installed).
+* The bar chart, effects scatterplot and sensitivity plots are now drawn with
+  ggplot2 and return ggplot objects, so they can be modified with `+`.
+  ggplot2 is a new import; ggrepel and ragg are suggested.
+* Examples use `powerTraits`; the package ships no simulated data.
+
 ## Stability decomposition overhaul
 
 * New two-step workflow: `stabilityData()` merges Time 1, Time 2 and any extra
@@ -24,8 +49,6 @@
   the Time 1 ones (e.g. baseline controls) and `keep = "all"` keeps both.
   The shared items are given by `commonItems` (formerly `items`) and returned
   as `attr(, "commonItems")`, which `stabilityPaths()` reads by default.
-* New simulated dataset `stabilitySim`, with the true decomposition, and a
-  vignette: `vignette("stability-decomposition")`.
 * `fitModel()` and `modelOnAllY()` gain `reliability` and `metric`; they lose
   `standardize`. Output renamed: `propTotal` is now `share`, `totalStability`
   is now `total`.

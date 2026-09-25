@@ -120,18 +120,20 @@
 #' @seealso \code{\link{stabilityPaths}}
 #'
 #' @examples
-#' d <- stabilityData(stabilitySim$T1, stabilitySim$T2, stabilitySim$experience,
-#'                    keep = "T1", fill = list(leader = 0))
-#' attr(d, "commonItems")
+#' pt <- powerTraits
+#' items <- c("power", "Powerful_role", "Shy_role")
+#' d <- stabilityData(pt$T1, pt$T2, pt$people, commonItems = items,
+#'                    date = "date")
 #' head(d)
+#' summary(d$interval_days)
 #'
 #' # everyone kept: people with no Time 2 data are still in the frame
-#' colSums(!is.na(d[, c("dominant[T1]", "dominant[T2]")]))
+#' colSums(!is.na(d[, c("Powerful_role[T1]", "Powerful_role[T2]")]))
 #'
-#' # correlate every common item at Time 1 with every common item at Time 2
-#' dI <- stabilityData(stabilitySim$T1, stabilitySim$T2, join = "inner")
-#' ci <- attr(dI, "commonItems")
-#' round(cor(dI[paste0(ci, "[T1]")], dI[paste0(ci, "[T2]")]), 2)
+#' # only people seen at both waves; correlate every item across waves
+#' dI <- stabilityData(pt$T1, pt$T2, commonItems = items, join = "inner")
+#' round(cor(dI[paste0(items, "[T1]")], dI[paste0(items, "[T2]")],
+#'           use = "pairwise"), 2)
 #'
 #' @export
 stabilityData <- function(T1, T2, ..., id = "id", commonItems = NULL,

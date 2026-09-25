@@ -3,6 +3,7 @@
 # reliabilitySensitivity(). Run from the package root:
 #   Rscript dev/validate_stability.R
 suppressMessages(devtools::load_all(quiet = TRUE))
+source("dev/sim_stability.R")   # simulated data with a known decomposition
 
 pass <- 0; fail <- 0
 check <- function(desc, ok) {
@@ -64,13 +65,8 @@ inCI <- tru >= sp_L$paths$ci.lower & tru <= sp_L$paths$ci.upper
 cat(sprintf("    latent 95%% CIs covering truth: %d of %d\n", sum(inCI), length(inCI)))
 check("most latent CIs cover the truth", mean(inCI) >= .85)
 # Large-N check: at n = 20000, latent estimates within .03 of truth
-# Borrow only the generator definitions from data-raw (running the whole script
-# would rebuild and re-save the bundled .rda).
-source_env <- new.env()
-for (e in parse("data-raw/stabilitySim.R"))
-  if (is.call(e) && identical(e[[1]], as.name("<-")) && is.name(e[[2]]) &&
-      as.character(e[[2]]) %in% c("items", "pars", "genTrue", "addError"))
-    eval(e, source_env)
+# Generators come from dev/sim_stability.R, sourced above.
+source_env <- environment()
 set.seed(99)
 big <- source_env$genTrue(20000)
 bigT1 <- data.frame(id = seq_len(20000)); bigT2 <- bigT1
@@ -154,13 +150,24 @@ cat("\n8. Methods run\n")
 pdf(NULL)
 check("print",   !inherits(try(capture.output(print(sp_L)), silent = TRUE), "try-error"))
 check("summary", !inherits(try(capture.output(print(summary(sp_L))), silent = TRUE), "try-error"))
-check("plot bars", !inherits(try(plot(sp_L), silent = TRUE), "try-error"))
-check("plot share", !inherits(try(plot(sp_L, what = "share", sort = TRUE), silent = TRUE), "try-error"))
+check("plot bars", !inherits(try(print(plot(sp_L)), silent = TRUE), "try-error"))
+check("plot share", !inherits(try(print(plot(sp_L, what = "share", sort = TRUE)), silent = TRUE), "try-error"))
 check("plot diagram", !inherits(try(plot(sp_L, item = "dominant"), silent = TRUE), "try-error"))
 sens <- reliabilitySensitivity(sp_o, rel = c(.6, .8, 1))
 check("sensitivity at rel=1 equals observed",
-      isTRUE(all.equal(sens$est[sens$reliability == 1], sp_o$paths$est)))
-check("plot sensitivity", !inherits(try(plot(sens), silent = TRUE), "try-error"))
+      isTRUE(all.equal(sens$paths$est[sens$paths$reliability == 1], sp_o$paths$est)))
+e1 <- sens$effects[sens$effects$reliability == 1, ]
+st <- sp_o$summary
+check("sensitivity effects at rel=1 match summary (selection, change)",
+      isTRUE(all.equal(e1$est[e1$effect == "selection"], st[["leader_on_Y1"]])) &&
+      isTRUE(all.equal(e1$est[e1$effect == "change"], st[["Y2_on_leader"]])))
+check("print sensitivity", !inherits(try(capture.output(print(sens)), silent = TRUE), "try-error"))
+check("plot sensitivity (effects)", !inherits(try(print(plot(sens)), silent = TRUE), "try-error"))
+check("plot sensitivity (est, controls pooled)",
+      !inherits(try(print(plot(sens, what = "est", show_controls = TRUE)), silent = TRUE), "try-error"))
+eff <- try({ g <- plot(sp_o, type = "effects"); print(g); g }, silent = TRUE)
+check("plot effects scatter", !inherits(eff, "try-error") &&
+      isTRUE(all.equal(eff$data$change, st[["Y2_on_leader"]])))
 dev.off()
 
 cat(sprintf("\n%d passed, %d failed\n", pass, fail))

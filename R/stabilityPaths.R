@@ -199,20 +199,25 @@
 #'   underlying machinery.
 #'
 #' @examples
-#' d <- stabilityData(stabilitySim$T1, stabilitySim$T2, stabilitySim$experience,
-#'                    keep = "T1", fill = list(leader = 0))
+#' # How much of the stability of two role identities runs through power?
+#' d <- stabilityData(powerTraits$T1, powerTraits$T2, powerTraits$people,
+#'                    commonItems = c("power", "Powerful_role", "Shy_role"))
 #'
 #' # observed items
-#' sp <- stabilityPaths(d, X = "leader", controls = "ses")
+#' sp <- stabilityPaths(d, items = c("Powerful_role", "Shy_role"),
+#'                      X = "power[T1]", controls = "tenure")
 #' sp
 #'
-#' # adjusted for each item's retest reliability
-#' spL <- stabilityPaths(d, X = "leader", controls = "ses",
-#'                       reliability = stabilitySim$reliability)
+#' # adjusted for retest reliability (assumed .75 for the items; .93 for
+#' # power, an average over many raters)
+#' spL <- stabilityPaths(d, items = c("Powerful_role", "Shy_role"),
+#'                       X = "power[T1]", controls = "tenure",
+#'                       reliability = c(Powerful_role = .75, Shy_role = .75,
+#'                                       "power[T1]" = .93))
 #' spL
 #' summary(spL)
 #' plot(spL)
-#' plot(spL, item = "dominant")
+#' plot(spL, item = "Powerful_role")
 #'
 #' @export
 stabilityPaths <- function(data, items = attr(data, "commonItems"), X = NULL,

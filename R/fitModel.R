@@ -90,16 +90,16 @@
 #'   \code{\link{stabilityPaths}}
 #'
 #' @examples
-#' spec <- stabilityModel(X = "leader", controls = "ses")
-#' d <- stabilityData(stabilitySim$T1, stabilitySim$T2, stabilitySim$experience,
-#'                    keep = "T1", fill = list(leader = 0))
-#' bind <- c(Y1 = "dominant[T1]", Y2 = "dominant[T2]")
+#' spec <- stabilityModel(X = "power[T1]", controls = "tenure")
+#' d <- stabilityData(powerTraits$T1, powerTraits$T2, powerTraits$people,
+#'                    commonItems = c("power", "Powerful_role"))
+#' bind <- c(Y1 = "Powerful_role[T1]", Y2 = "Powerful_role[T2]")
 #'
 #' # observed variables
 #' fitModel(spec, d, bind, metric = "std")$paths
 #'
-#' # the same model with Y1 and Y2 corrected for unreliability
-#' fitModel(spec, d, bind, reliability = c(Y1 = .7, Y2 = .7), metric = "std")$paths
+#' # the same model with Y1 and Y2 adjusted for retest reliability
+#' fitModel(spec, d, bind, reliability = c(Y1 = .75, Y2 = .75), metric = "std")$paths
 #'
 #' @export
 #' @importFrom lavaan sem parameterestimates standardizedSolution nobs lavInspect

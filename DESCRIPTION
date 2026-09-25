@@ -26,6 +26,7 @@ Imports:
     purrr,
     lubridate,
     qgraph,
+    ggplot2,
     graphics,
     grDevices,
     stats,
@@ -34,6 +35,8 @@ Imports:
     tidyr
 Suggests:
     qualtRics,
+    ggrepel,
+    ragg,
     haven,
     knitr,
     rmarkdown
