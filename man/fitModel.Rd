@@ -44,12 +44,14 @@ A named list with components:
   columns declared in \code{spec$extract}, plus \code{est}, \code{se},
   \code{pvalue}, \code{ci.lower}, \code{ci.upper}. A \code{share} column
   (each estimate divided by the total) is added when the spec extracts a row
-  of type \code{"total"}.}
+  of type \code{"total"}. If \code{spec$extract} has an \code{outcome}
+  column, as when a spec decomposes more than one total, each row's share
+  is taken of the total with the same \code{outcome}.}
 \item{coefficients}{Data frame of all structural coefficients
   (\code{~} and off-diagonal \code{~~}), labelled with original names, in
   the requested metric.}
-\item{total}{The \code{"total"} estimate if the spec defines one, otherwise
-  \code{NA}.}
+\item{total}{The \code{"total"} estimate if the spec defines one (the first,
+  if it defines several), otherwise \code{NA}.}
 \item{n}{Number of observations used.}
 \item{converged}{Logical.}
 \item{admissible}{Logical: \code{FALSE} if the solution has negative

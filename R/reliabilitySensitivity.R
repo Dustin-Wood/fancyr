@@ -27,6 +27,14 @@
 #' people usually stand at Time 1, so a change effect that survives low
 #' modeled reliabilities is harder to attribute to incomplete control.
 #'
+#' For a \code{\link{crossLagPaths}} result the effects are those in its
+#' \code{$effects}: selection (\code{X2 ~ Y1}), change (\code{Y2 ~ X1}), both
+#' stabilities, the Time 1 association, the Time 2 co-change, and the controls'
+#' effects; \code{$paths} holds both stability decompositions, with an
+#' \code{outcome} column saying whose stability each row decomposes. The grid
+#' varies the items' reliability only; the reliability of \code{X} stays as
+#' supplied in the original analysis.
+#'
 #' Grid values below an item's retest correlation typically give inadmissible
 #' solutions (adjusted stability above 1); these rows are kept but flagged
 #' \code{admissible = FALSE}, and the plot method leaves them out.
@@ -37,10 +45,15 @@
 #' \code{\link{stabilityPaths}} for why that interval, rather than a
 #' same-session or very short one.
 #'
-#' @param x A \code{fancyStability} object from \code{\link{stabilityPaths}}.
+#' @param x A \code{fancyStability} object from \code{\link{stabilityPaths}},
+#'   or a \code{fancyCrossLag} object from \code{\link{crossLagPaths}}.
 #' @param rel Numeric vector of reliabilities to try, each in (0, 1]. Defaults
 #'   to \code{seq(.5, 1, .1)}.
 #' @param items Items to include. Defaults to all items in \code{x}.
+#' @param cores Number of CPU cores to spread each refit's items over, or a
+#'   cluster from \code{\link[parallel]{makeCluster}}. Defaults to the value
+#'   used for \code{x}. Worker processes are started once and reused across
+#'   the grid.
 #'
 #' @return An object of class \code{fancyStabilitySensitivity}: a list with
 #' \item{effects}{Data frame, one row per reliability per item per effect:
@@ -59,7 +72,7 @@
 #' \pkg{ggplot2} object, which prints as the plot and can be modified with
 #' \code{+}.
 #'
-#' @seealso \code{\link{stabilityPaths}}
+#' @seealso \code{\link{stabilityPaths}}, \code{\link{crossLagPaths}}
 #'
 #' @examples
 #' d <- stabilityData(powerTraits$T1, powerTraits$T2, powerTraits$people,
@@ -73,9 +86,11 @@
 #'
 #' @export
 reliabilitySensitivity <- function(x, rel = seq(.5, 1, .1),
-                                   items = x$settings$items) {
-  if (!inherits(x, "fancyStability"))
-    stop("`x` must be a stabilityPaths() result.")
+                                   items = x$settings$items,
+                                   cores = x$settings$cores) {
+  crossLag <- inherits(x, "fancyCrossLag")
+  if (!inherits(x, "fancyStability") && !crossLag)
+    stop("`x` must be a stabilityPaths() or crossLagPaths() result.")
   if (!is.numeric(rel) || any(is.na(rel)) || any(rel <= 0 | rel > 1))
     stop("`rel` must be reliabilities in (0, 1].")
   s <- x$settings
@@ -83,19 +98,28 @@ reliabilitySensitivity <- function(x, rel = seq(.5, 1, .1),
   if (length(unknown))
     stop("Item(s) not in `x`: ", paste(unknown, collapse = ", "))
 
+  # start any worker processes once, and reuse them at every grid value
+  oc <- openCores(if (is.null(cores)) 1 else cores, length(items))
+  on.exit(oc$close(), add = TRUE)
+
   fits <- lapply(sort(unique(rel)), function(r) {
     relv <- c(stats::setNames(rep(r, length(items)), items), s$reliability$other)
-    fit <- stabilityPaths(x$data, items = items, X = s$X, controls = s$controls,
-                          reliability = relv, metric = s$metric,
-                          suffixes = unname(s$suffixes), missing = s$missing)
+    refit <- if (crossLag) crossLagPaths else stabilityPaths
+    fit <- refit(x$data, items = items, X = s$X, controls = s$controls,
+                 reliability = relv, metric = s$metric,
+                 suffixes = unname(s$suffixes), missing = s$missing,
+                 cores = oc$cores)
     adm <- function(it) fit$status$admissible[match(it, fit$status$item)]
     p <- fit$paths
-    e <- effectTable(fit)
+    e <- if (crossLag) fit$effects else effectTable(fit)
+    paths <- data.frame(reliability = r, item = p$item, path = p$path,
+                        type = p$type, est = p$est, se = p$se,
+                        share = p$share, admissible = adm(p$item),
+                        stringsAsFactors = FALSE)
+    if (crossLag) paths <- cbind(paths[1:2], outcome = p$outcome, paths[-(1:2)],
+                                 stringsAsFactors = FALSE)
     list(
-      paths = data.frame(reliability = r, item = p$item, path = p$path,
-                         type = p$type, est = p$est, se = p$se,
-                         share = p$share, admissible = adm(p$item),
-                         stringsAsFactors = FALSE),
+      paths = paths,
       effects = data.frame(reliability = r, e, admissible = adm(e$item),
                            stringsAsFactors = FALSE))
   })
@@ -137,8 +161,9 @@ print.fancyStabilitySensitivity <- function(x, digits = 2, ...) {
 #'   pathway estimates or their shares of the total.
 #' @param effects For \code{what = "effects"}: which effects to draw, any of
 #'   \code{"selection"} (default), \code{"change"} (default),
-#'   \code{"stability"} and \code{"control"}. One panel per effect and
-#'   mediator (or control).
+#'   \code{"stability"} and \code{"control"}, plus, for a cross-lag fit,
+#'   \code{"association"} and \code{"co-change"}. One panel per effect and
+#'   path.
 #' @param show_controls For \code{what = "est"} or \code{"share"}: draw a panel
 #'   for each control's (confounded) pathway? Default \code{FALSE}.
 #' @param pool With \code{show_controls = TRUE}, an optional named list of
@@ -153,7 +178,8 @@ plot.fancyStabilitySensitivity <- function(x, what = c("effects", "est", "share"
                                            show_controls = FALSE, pool = NULL,
                                            ...) {
   what <- match.arg(what)
-  effects <- match.arg(effects, c("selection", "change", "stability", "control"),
+  effects <- match.arg(effects, c("selection", "change", "stability", "control",
+                                  "association", "co-change"),
                        several.ok = TRUE)
   ylab_est <- if (identical(x$metric, "raw")) "estimate" else "standardized estimate"
 
@@ -162,7 +188,8 @@ plot.fancyStabilitySensitivity <- function(x, what = c("effects", "est", "share"
     ok <- !is.na(d$admissible) & d$admissible
     d[!ok, c("est", "ci.lower", "ci.upper")] <- NA
     titles <- c(selection = "Selection effect", change = "Change effect",
-                stability = "Stability", control = "Control effect")
+                stability = "Stability", control = "Control effect",
+                association = "T1 association", `co-change` = "Co-change")
     d$panel <- paste0(titles[d$effect], ": ", pathLabel(d$path))
     d$panel <- factor(d$panel, levels = unique(d$panel[order(match(d$effect, effects))]))
     d$sig <- factor(ifelse(!is.na(d$pvalue) & d$pvalue < .05, "p < .05", "p \u2265 .05"),
@@ -197,7 +224,11 @@ plot.fancyStabilitySensitivity <- function(x, what = c("effects", "est", "share"
   else d <- poolPaths(d, pool)
   d <- d[d$type != "total" | what == "est", ]
   d$y <- ifelse(!is.na(d$admissible) & d$admissible, d[[what]], NA)
-  d$path <- factor(pathLabel(d$path), levels = unique(pathLabel(d$path)))
+  d$path <- pathLabel(d$path)
+  # a cross-lag fit decomposes two stabilities; say whose each panel shows
+  if ("outcome" %in% names(d))
+    d$path <- paste0(ifelse(d$outcome == "item", "item", d$outcome), ": ", d$path)
+  d$path <- factor(d$path, levels = unique(d$path))
   d$item <- factor(d$item, levels = unique(d$item))
   rels <- sort(unique(d$reliability))
 

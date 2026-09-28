@@ -52,6 +52,15 @@
 #'   \code{\link{fitModel}}.
 #' @param return_estimates Logical. If \code{TRUE} (default), include the full
 #'   per-item \code{\link{fitModel}} results in \code{$modelEstimates}.
+#' @param cores Number of CPU cores to spread the items over (default 1, no
+#'   parallel processing), or a cluster from \code{\link[parallel]{makeCluster}}
+#'   to reuse. Each core is a separate background R session that takes a few
+#'   seconds to start, so parallel processing pays off for many items. On
+#'   Windows, the first use may bring up a firewall prompt (the connection
+#'   stays on your computer); if the sessions can't be started, the items are
+#'   fitted on one core with a warning. See "Parallel processing" in
+#'   \code{\link{lassoLoops}}. Messages about individual items' problems are
+#'   not shown from parallel sessions; \code{$status} still records them.
 #'
 #' @return A named list with components:
 #' \item{paths}{Long data frame, one row per item per extracted parameter,
@@ -99,7 +108,7 @@
 modelOnAllY <- function(spec, data, items,
                         suffixes = c(Y1 = "[T1]", Y2 = "[T2]"),
                         reliability = NULL, metric = c("raw", "std"),
-                        return_estimates = TRUE) {
+                        return_estimates = TRUE, cores = 1) {
 
   if (!inherits(spec, "fancyModel"))
     stop("`spec` must be a fancyModel object (see ?fancyModel).")
@@ -138,7 +147,22 @@ modelOnAllY <- function(spec, data, items,
   has_total <- "type" %in% names(spec$extract) && any(spec$extract$type == "total")
   if (has_total) na_paths$share <- NA_real_
 
-  fits <- lapply(items, function(item) {
+  # Items are fitted independently, so they can be spread over cores. The
+  # per-item function gets a minimal environment -- the columns it needs,
+  # fitModel() and its one helper -- so parallel workers load only lavaan,
+  # not fancyr and all its imports (much slower to start).
+  cols <- intersect(c(as.vector(outer(items, suffixes, paste0)), unname(spec$vars)),
+                    names(data))
+  env <- list2env(list(spec = spec, data = data[, cols, drop = FALSE],
+                       suffixes = suffixes, reliability = reliability,
+                       metric = metric),
+                  parent = baseenv())
+  for (f in c("fitModel", "checkReliability")) {
+    fn <- get(f); environment(fn) <- env; assign(f, fn, envir = env)
+  }
+  environment(rel_for) <- env
+  env$rel_for <- rel_for
+  fitOne <- function(item) {
     bind <- stats::setNames(paste0(item, suffixes), names(suffixes))
 
     absent <- setdiff(bind, names(data))
@@ -157,7 +181,9 @@ modelOnAllY <- function(spec, data, items,
       }
     )
     res
-  })
+  }
+  environment(fitOne) <- env
+  fits <- fancyLapply(items, fitOne, cores = cores)
   names(fits) <- items
 
   ok <- function(r) isTRUE(r$converged)
@@ -186,6 +212,8 @@ modelOnAllY <- function(spec, data, items,
     out <- data.frame(item = tot$item, est = tot$est, se = tot$se,
                       pvalue = tot$pvalue, ci.lower = tot$ci.lower,
                       ci.upper = tot$ci.upper, stringsAsFactors = FALSE)
+    if ("outcome" %in% names(tot))
+      out <- cbind(out[1], outcome = tot$outcome, out[-1], stringsAsFactors = FALSE)
     rownames(out) <- NULL
     out
   } else NULL
@@ -218,6 +246,9 @@ modelOnAllY <- function(spec, data, items,
   # otherwise the lavaan label.
   path_stems <- if ("path" %in% names(spec$extract)) as.character(spec$extract$path)
                 else spec$extract$label
+  # a spec decomposing several totals prefixes each stem with its outcome
+  if ("outcome" %in% names(spec$extract))
+    path_stems <- paste0(spec$extract$outcome, "_", path_stems)
   path_stems <- make.unique(path_stems)
 
   # Coefficient stems. A sliding role keeps its role name (Y1, Y2), since the

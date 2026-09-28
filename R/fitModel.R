@@ -68,12 +68,14 @@
 #'   columns declared in \code{spec$extract}, plus \code{est}, \code{se},
 #'   \code{pvalue}, \code{ci.lower}, \code{ci.upper}. A \code{share} column
 #'   (each estimate divided by the total) is added when the spec extracts a row
-#'   of type \code{"total"}.}
+#'   of type \code{"total"}. If \code{spec$extract} has an \code{outcome}
+#'   column, as when a spec decomposes more than one total, each row's share
+#'   is taken of the total with the same \code{outcome}.}
 #' \item{coefficients}{Data frame of all structural coefficients
 #'   (\code{~} and off-diagonal \code{~~}), labelled with original names, in
 #'   the requested metric.}
-#' \item{total}{The \code{"total"} estimate if the spec defines one, otherwise
-#'   \code{NA}.}
+#' \item{total}{The \code{"total"} estimate if the spec defines one (the first,
+#'   if it defines several), otherwise \code{NA}.}
 #' \item{n}{Number of observations used.}
 #' \item{converged}{Logical.}
 #' \item{admissible}{Logical: \code{FALSE} if the solution has negative
@@ -220,8 +222,17 @@ fitModel <- function(spec, data, bind, reliability = NULL,
   for (cl in c("est", "se", "pvalue", "ci.lower", "ci.upper"))
     path_rows[[cl]] <- vapply(path_rows$label, grab, numeric(1), col = cl)
 
-  total <- if (has_total) path_rows$est[path_rows$type == "total"][1] else NA_real_
-  if (has_total) path_rows$share <- path_rows$est / total
+  # A spec may decompose more than one total (e.g. a cross-lag model decomposes
+  # the stability of both variables); an `outcome` column says which total
+  # each row belongs to, and shares are taken within outcome.
+  grp <- if ("outcome" %in% names(path_rows)) path_rows$outcome
+         else rep("", nrow(path_rows))
+  totals <- if (has_total) path_rows$est[path_rows$type == "total"] else NA_real_
+  total  <- totals[1]
+  if (has_total) {
+    is_tot <- path_rows$type == "total"
+    path_rows$share <- path_rows$est / path_rows$est[is_tot][match(grp, grp[is_tot])]
+  }
   path_rows$label <- NULL
   rownames(path_rows) <- NULL
 
@@ -229,7 +240,7 @@ fitModel <- function(spec, data, bind, reliability = NULL,
   problems <- character(0)
   if (!isTRUE(suppressWarnings(lavaan::lavInspect(fit, "post.check"))))
     problems <- c(problems, "negative variance estimate")
-  if (metric == "std" && has_total && isTRUE(abs(total) > 1))
+  if (metric == "std" && has_total && isTRUE(any(abs(totals) > 1)))
     problems <- c(problems, "standardized total stability exceeds 1")
   if (length(latent) && !length(problems) &&
       any(grepl("not positive definite|negative", warns)))

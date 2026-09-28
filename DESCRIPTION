@@ -27,6 +27,7 @@ Imports:
     lubridate,
     qgraph,
     ggplot2,
+    parallel,
     graphics,
     grDevices,
     stats,
@@ -39,7 +40,8 @@ Suggests:
     ragg,
     haven,
     knitr,
-    rmarkdown
+    rmarkdown,
+    glmnet
 VignetteBuilder: knitr
 Config/roxygen2/version: 8.0.0
 RoxygenNote: 7.3.3

@@ -59,8 +59,10 @@ names.}
   \item{\code{label_cex}, \code{title}}{Node text size; plot title.}
 }
 Latent variables are drawn as ellipses labelled with their reliability.
-For the effects scatterplot: \code{xlim} and \code{ylim} (axis ranges)
-and \code{title}. The bar chart ignores \code{...}.}
+For the effects scatterplot: \code{xlim} and \code{ylim} (axis ranges),
+\code{title}, \code{bands} (\code{TRUE}, \code{FALSE}, or a list of fits
+to compute the significance bands from) and \code{same_range}; see the
+sections above. The bar chart ignores \code{...}.}
 }
 \value{
 The bar chart and effects scatterplot return \pkg{ggplot2} objects,
@@ -86,12 +88,31 @@ experience is more common among people high (or low) on the item, and
 pushes the item further in that direction, i.e. the relationship is
 \emph{corresponsive} (Roberts, Caspi, & Moffitt, 2003). Items in the other
 two quadrants have \emph{anti-corresponsive} effects, and items near an axis
-have one effect without the other. A point's fill shows its change effect
-(filled if p < .05, white otherwise) and its outline shows its selection
-effect (black if p < .05, light grey otherwise); a filled point takes its
-outline colour. Labels are placed with \pkg{ggrepel} when it is installed. To
-compare two analyses (e.g. with and without a reliability adjustment), pass
-both plots the same \code{xlim} and \code{ylim}.
+have one effect without the other. A point's fill shows which of its
+effects reached p < .05: black for both, orange for selection only, blue for
+change only, and white for neither. Labels are placed with \pkg{ggrepel}
+when it is installed. By default both axes share one range centred on zero,
+with equal scaling (\code{same_range = TRUE}). To compare two analyses
+(e.g. with and without a reliability adjustment), pass both plots the same
+\code{xlim} and \code{ylim}, and the same list of fits as \code{bands}.
+}
+
+\section{Significance bands}{
+
+An estimate is significant at .05 when it is more than 1.96 standard errors
+from zero, so each item has its own critical value, \eqn{1.96 \times SE}.
+The shaded bands summarize these across items, separately for each axis:
+\itemize{
+  \item the \strong{darker band} runs to the smallest critical value: an
+    estimate inside it would not be significant for any item;
+  \item the \strong{lighter band} runs to the largest: an estimate inside it
+    would be significant for some items but not others;
+  \item beyond both, an estimate would be significant for every item.
+}
+Thin grey lines mark the band edges, and solid black lines mark zero on
+each axis.
+The bands differ between the axes when one kind of effect is estimated more
+precisely than the other, e.g. because more people contribute to it.
 }
 
 \examples{

@@ -112,7 +112,9 @@ stabilityModel <- function(X = NULL, controls = NULL) {
     roles    = stats::setNames(
                  c("Y1", "Y2", rep("mediator", m), rep("control", k)),
                  c("Y1", "Y2", Xn, Cn)),
-    sem_args = list(missing = "fiml", fixed.x = FALSE),
+    # saturated (df = 0), so the baseline and h1 fits behind fit indices are
+    # skipped; estimates and standard errors are unaffected
+    sem_args = list(missing = "fiml", fixed.x = FALSE, h1 = FALSE, baseline = FALSE),
     label    = sprintf("stability decomposition (%d mediator%s, %d control%s)",
                        m, if (m == 1) "" else "s", k, if (k == 1) "" else "s")
   )

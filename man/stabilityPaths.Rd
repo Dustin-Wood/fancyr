@@ -12,7 +12,8 @@ stabilityPaths(
   reliability = NULL,
   metric = c("std", "raw"),
   suffixes = c("[T1]", "[T2]"),
-  missing = "fiml"
+  missing = "fiml",
+  cores = 1
 )
 }
 \arguments{
@@ -44,6 +45,10 @@ item's Time 1 and Time 2 columns. Defaults to \code{c("[T1]", "[T2]")}.}
 
 \item{missing}{Missing-data method passed to \code{\link[lavaan]{sem}}.
 Defaults to \code{"fiml"}; \code{"listwise"} drops incomplete cases.}
+
+\item{cores}{Number of CPU cores to spread the items over (default 1), or
+a cluster from \code{\link[parallel]{makeCluster}}; see
+\code{\link{modelOnAllY}}. Worth it for many items.}
 }
 \value{
 An object of class \code{fancyStability}: a list with

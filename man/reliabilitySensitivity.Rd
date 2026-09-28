@@ -6,7 +6,12 @@
 \alias{plot.fancyStabilitySensitivity}
 \title{How Much Do Stability Results Depend on the Modeled Reliability?}
 \usage{
-reliabilitySensitivity(x, rel = seq(0.5, 1, 0.1), items = x$settings$items)
+reliabilitySensitivity(
+  x,
+  rel = seq(0.5, 1, 0.1),
+  items = x$settings$items,
+  cores = x$settings$cores
+)
 
 \method{print}{fancyStabilitySensitivity}(x, digits = 2, ...)
 
@@ -20,12 +25,18 @@ reliabilitySensitivity(x, rel = seq(0.5, 1, 0.1), items = x$settings$items)
 )
 }
 \arguments{
-\item{x}{A \code{fancyStability} object from \code{\link{stabilityPaths}}.}
+\item{x}{A \code{fancyStability} object from \code{\link{stabilityPaths}},
+or a \code{fancyCrossLag} object from \code{\link{crossLagPaths}}.}
 
 \item{rel}{Numeric vector of reliabilities to try, each in (0, 1]. Defaults
 to \code{seq(.5, 1, .1)}.}
 
 \item{items}{Items to include. Defaults to all items in \code{x}.}
+
+\item{cores}{Number of CPU cores to spread each refit's items over, or a
+cluster from \code{\link[parallel]{makeCluster}}. Defaults to the value
+used for \code{x}. Worker processes are started once and reused across
+the grid.}
 
 \item{digits}{Number of decimal places to print.}
 
@@ -38,8 +49,9 @@ pathway estimates or their shares of the total.}
 
 \item{effects}{For \code{what = "effects"}: which effects to draw, any of
 \code{"selection"} (default), \code{"change"} (default),
-\code{"stability"} and \code{"control"}. One panel per effect and
-mediator (or control).}
+\code{"stability"} and \code{"control"}, plus, for a cross-lag fit,
+\code{"association"} and \code{"co-change"}. One panel per effect and
+path.}
 
 \item{show_controls}{For \code{what = "est"} or \code{"share"}: draw a panel
 for each control's (confounded) pathway? Default \code{FALSE}.}
@@ -95,6 +107,14 @@ Modeling the items as less reliable controls more completely for where
 people usually stand at Time 1, so a change effect that survives low
 modeled reliabilities is harder to attribute to incomplete control.
 
+For a \code{\link{crossLagPaths}} result the effects are those in its
+\code{$effects}: selection (\code{X2 ~ Y1}), change (\code{Y2 ~ X1}), both
+stabilities, the Time 1 association, the Time 2 co-change, and the controls'
+effects; \code{$paths} holds both stability decompositions, with an
+\code{outcome} column saying whose stability each row decomposes. The grid
+varies the items' reliability only; the reliability of \code{X} stays as
+supplied in the original analysis.
+
 Grid values below an item's retest correlation typically give inadmissible
 solutions (adjusted stability above 1); these rows are kept but flagged
 \code{admissible = FALSE}, and the plot method leaves them out.
@@ -117,5 +137,5 @@ plot(sens, what = "est")
 
 }
 \seealso{
-\code{\link{stabilityPaths}}
+\code{\link{stabilityPaths}}, \code{\link{crossLagPaths}}
 }

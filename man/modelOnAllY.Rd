@@ -11,7 +11,8 @@ modelOnAllY(
   suffixes = c(Y1 = "[T1]", Y2 = "[T2]"),
   reliability = NULL,
   metric = c("raw", "std"),
-  return_estimates = TRUE
+  return_estimates = TRUE,
+  cores = 1
 )
 }
 \arguments{
@@ -38,6 +39,16 @@ absent from the list are fitted with every role observed. Defaults to
 
 \item{return_estimates}{Logical. If \code{TRUE} (default), include the full
 per-item \code{\link{fitModel}} results in \code{$modelEstimates}.}
+
+\item{cores}{Number of CPU cores to spread the items over (default 1, no
+parallel processing), or a cluster from \code{\link[parallel]{makeCluster}}
+to reuse. Each core is a separate background R session that takes a few
+seconds to start, so parallel processing pays off for many items. On
+Windows, the first use may bring up a firewall prompt (the connection
+stays on your computer); if the sessions can't be started, the items are
+fitted on one core with a warning. See "Parallel processing" in
+\code{\link{lassoLoops}}. Messages about individual items' problems are
+not shown from parallel sessions; \code{$status} still records them.}
 }
 \value{
 A named list with components:

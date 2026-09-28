@@ -167,6 +167,9 @@
 #'   item's Time 1 and Time 2 columns. Defaults to \code{c("[T1]", "[T2]")}.
 #' @param missing Missing-data method passed to \code{\link[lavaan]{sem}}.
 #'   Defaults to \code{"fiml"}; \code{"listwise"} drops incomplete cases.
+#' @param cores Number of CPU cores to spread the items over (default 1), or
+#'   a cluster from \code{\link[parallel]{makeCluster}}; see
+#'   \code{\link{modelOnAllY}}. Worth it for many items.
 #'
 #' @return An object of class \code{fancyStability}: a list with
 #' \item{paths}{Long data frame, one row per item per pathway: \code{item},
@@ -223,7 +226,8 @@
 stabilityPaths <- function(data, items = attr(data, "commonItems"), X = NULL,
                            controls = NULL, reliability = NULL,
                            metric = c("std", "raw"),
-                           suffixes = c("[T1]", "[T2]"), missing = "fiml") {
+                           suffixes = c("[T1]", "[T2]"), missing = "fiml",
+                           cores = 1) {
 
   if (!is.data.frame(data)) stop("`data` must be a data frame.")
   metric <- match.arg(metric)
@@ -265,7 +269,8 @@ stabilityPaths <- function(data, items = attr(data, "commonItems"), X = NULL,
                      suffixes         = suffixes,
                      reliability      = rel$by_item,
                      metric           = metric,
-                     return_estimates = TRUE)
+                     return_estimates = TRUE,
+                     cores            = cores)
 
   ## ---- per-item descriptives for the summary ------------------------------
   desc <- do.call(rbind, lapply(seq_along(items), function(i) {
@@ -300,7 +305,8 @@ stabilityPaths <- function(data, items = attr(data, "commonItems"), X = NULL,
       fits         = res$modelEstimates,
       settings     = list(items = items, X = X, controls = controls,
                           reliability = rel, metric = metric,
-                          suffixes = suffixes, missing = missing),
+                          suffixes = suffixes, missing = missing,
+                          cores = if (is.numeric(cores)) cores else 1L),
       data         = data[, keep_cols, drop = FALSE]
     ),
     class = "fancyStability"
@@ -310,7 +316,12 @@ stabilityPaths <- function(data, items = attr(data, "commonItems"), X = NULL,
 # Turn the user-facing `reliability` argument into (a) a list, named by item,
 # of role-keyed vectors for modelOnAllY(), and (b) an item-by-wave table for
 # display. Roles: Y1/Y2 for the item, X1..Xm for X, C1..Ck for controls.
-resolveReliability <- function(reliability, items, X, controls) {
+#
+# `xWaves` is for a two-wave experience (crossLagPaths()): a list with `base`
+# (e.g. "power") and `cols` (its Time 1 and Time 2 columns), bound to roles X1
+# and X2. The base name then sets both waves, and a data frame row for it sets
+# each wave from its T1 and T2 columns. `X` is empty in that case.
+resolveReliability <- function(reliability, items, X, controls, xWaves = NULL) {
   n <- length(items)
   tab <- data.frame(item = items, T1 = rep(NA_real_, n), T2 = rep(NA_real_, n),
                     stringsAsFactors = FALSE)
@@ -318,8 +329,29 @@ resolveReliability <- function(reliability, items, X, controls) {
   role_of <- stats::setNames(
     c(character(0),
       if (length(X)) paste0("X", seq_along(X)),
+      if (!is.null(xWaves)) c("X1", "X2"),
       if (length(controls)) paste0("C", seq_along(controls))),
-    c(X, controls))
+    c(X, xWaves$cols, controls))
+
+  # expand the base name of a two-wave X into its two columns
+  if (!is.null(xWaves) && !is.null(reliability)) {
+    base <- xWaves$base; cols <- xWaves$cols
+    if (is.data.frame(reliability) && "item" %in% names(reliability) &&
+        base %in% reliability$item) {
+      r <- reliability[reliability$item == base, , drop = FALSE][1, ]
+      t1 <- if (is.na(r$T1)) r$T2 else r$T1
+      t2 <- if (is.na(r$T2)) r$T1 else r$T2
+      reliability <- rbind(reliability[reliability$item != base,
+                                       c("item", "T1", "T2"), drop = FALSE],
+                           data.frame(item = cols, T1 = c(t1, t2), T2 = NA_real_,
+                                      stringsAsFactors = FALSE))
+    } else if (is.numeric(reliability) && !is.null(names(reliability)) &&
+               base %in% names(reliability)) {
+      v <- reliability[[base]]
+      reliability <- c(reliability[names(reliability) != base],
+                       stats::setNames(c(v, v), cols))
+    }
+  }
 
   if (is.null(reliability)) {
     # nothing to do
@@ -328,7 +360,7 @@ resolveReliability <- function(reliability, items, X, controls) {
     if (length(need))
       stop("A data frame `reliability` needs columns item, T1 and T2; missing: ",
            paste(need, collapse = ", "))
-    unknown <- setdiff(reliability$item, c(items, X, controls))
+    unknown <- setdiff(reliability$item, c(items, names(role_of)))
     if (length(unknown))
       stop("`reliability` names variable(s) that are not items, X or controls: ",
            paste(unknown, collapse = ", "))
@@ -349,7 +381,7 @@ resolveReliability <- function(reliability, items, X, controls) {
              n, "); got ", length(reliability), ".")
       }
     } else {
-      unknown <- setdiff(nm, c(items, X, controls))
+      unknown <- setdiff(nm, c(items, names(role_of)))
       if (length(unknown))
         stop("`reliability` names variable(s) that are not items, X or ",
              "controls: ", paste(unknown, collapse = ", "))

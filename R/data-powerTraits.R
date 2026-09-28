@@ -5,7 +5,7 @@
 #' (in general, and as a member of the organization), and each member's
 #' social power as rated by the other members. These are the data analysed by
 #' Wood and Harms (2017). See \code{vignette("traits-and-power")} for a worked
-#' example with \code{\link{stabilityPaths}}.
+#' example with \code{\link{crossLagPaths}}.
 #'
 #' @section Measures:
 #' \describe{
