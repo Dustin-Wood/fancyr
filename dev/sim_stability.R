@@ -1,9 +1,15 @@
-# Builds data/stabilitySim.rda: a simulated two-wave personality study with a
-# leadership experience between waves, known latent paths, known item
-# reliabilities, and dropout that depends on observed baseline scores (MAR).
+# Creates `stabilitySim` in the calling environment: a simulated two-wave
+# personality study with a leadership experience between waves, known latent
+# paths, known item reliabilities, and dropout that depends on observed
+# baseline scores (MAR). Also defines the generators `genTrue()` and
+# `addError()`, plus `items` and `pars`.
+#
+# Development use only (dev/ is excluded from the package build): it gives
+# dev/validate_stability.R a dataset whose true decomposition is known. The
+# package itself ships no simulated data.
 #
 # Run from the package root, with the package loaded:
-#   devtools::load_all(); source("data-raw/stabilitySim.R")
+#   devtools::load_all(); source("dev/sim_stability.R")
 
 items <- c("dominant", "sociable", "anxious", "organized", "curious", "warm")
 
@@ -94,5 +100,3 @@ reliability <- stats::setNames(pars$rel, items)
 stabilitySim <- list(T1 = T1, T2 = T2, experience = experience,
                      reliability = reliability, truth = truth,
                      generating = pars)
-
-save(stabilitySim, file = "data/stabilitySim.rda", compress = "xz")

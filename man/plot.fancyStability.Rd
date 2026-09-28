@@ -4,7 +4,17 @@
 \alias{plot.fancyStability}
 \title{Plot a Stability Decomposition}
 \usage{
-\method{plot}{fancyStability}(x, item = NULL, what = c("est", "share"), sort = FALSE, ...)
+\method{plot}{fancyStability}(
+  x,
+  item = NULL,
+  what = c("est", "share"),
+  sort = FALSE,
+  pool = NULL,
+  type = c("bars", "effects"),
+  X = NULL,
+  labels = NULL,
+  ...
+)
 }
 \arguments{
 \item{x}{A \code{fancyStability} object from \code{\link{stabilityPaths}}.}
@@ -17,6 +27,22 @@ proportion of the total.}
 
 \item{sort}{Logical. Sort the bar chart by total stability? Default
 \code{FALSE} keeps item order.}
+
+\item{pool}{For the bar chart: optional named list of variable sets whose
+pathways are drawn as one segment, as in \code{print()}; see
+\code{\link{stabilityPaths-methods}}.}
+
+\item{type}{\code{"bars"} (default) for the bar chart, or \code{"effects"}
+for the selection-versus-change scatterplot (ignored when \code{item} is
+given).}
+
+\item{X}{For \code{type = "effects"}: which mediator's effects to plot.
+Defaults to the first \code{X}.}
+
+\item{labels}{For \code{type = "effects"}: point labels, either a character
+vector (one per item, in item order) or a function applied to the item
+names, e.g. \code{function(i) sub("_role$", "", i)}. Defaults to the item
+names.}
 
 \item{...}{For the path diagram, any of:
 \describe{
@@ -33,27 +59,79 @@ proportion of the total.}
   \item{\code{label_cex}, \code{title}}{Node text size; plot title.}
 }
 Latent variables are drawn as ellipses labelled with their reliability.
-For the bar chart, \code{...} is passed to \code{\link[graphics]{plot}}.}
+For the effects scatterplot: \code{xlim} and \code{ylim} (axis ranges),
+\code{title}, \code{bands} (\code{TRUE}, \code{FALSE}, or a list of fits
+to compute the significance bands from) and \code{same_range}; see the
+sections above. The bar chart ignores \code{...}.}
 }
 \value{
-Invisibly, the \code{qgraph} object (diagram) or the plotted matrix
-  of pathway values (bar chart).
+The bar chart and effects scatterplot return \pkg{ggplot2} objects,
+  which print as the plot and can be modified with \code{+} (e.g. a theme
+  or title). The scatterplot's data, each item's selection and change
+  effects with p-values, are in its \code{$data}. The path diagram returns
+  the \code{qgraph} object invisibly.
 }
 \description{
 With no \code{item}, draws one horizontal bar per item, divided into its
 pathways: residual stability in grey, mediated pathways in blues, confounded
 pathways in oranges. Positive parts stack rightward from zero and negative
 parts leftward, and a black tick marks each item's total. With \code{item},
-draws that item's path diagram instead.
+draws that item's path diagram instead. With \code{type = "effects"}, draws
+a scatterplot of every item's selection effect (\code{X ~ Y1}, horizontal)
+against its change effect (\code{Y2 ~ X}, vertical), labelled by item.
 }
+\section{Selection and change effects}{
+
+In the effects scatterplot, items in the upper-right and lower-left
+quadrants have selection and change effects of the same sign: the
+experience is more common among people high (or low) on the item, and
+pushes the item further in that direction, i.e. the relationship is
+\emph{corresponsive} (Roberts, Caspi, & Moffitt, 2003). Items in the other
+two quadrants have \emph{anti-corresponsive} effects, and items near an axis
+have one effect without the other. A point's fill shows which of its
+effects reached p < .05: black for both, orange for selection only, blue for
+change only, and white for neither. Labels are placed with \pkg{ggrepel}
+when it is installed. By default both axes share one range centred on zero,
+with equal scaling (\code{same_range = TRUE}). To compare two analyses
+(e.g. with and without a reliability adjustment), pass both plots the same
+\code{xlim} and \code{ylim}, and the same list of fits as \code{bands}.
+}
+
+\section{Significance bands}{
+
+An estimate is significant at .05 when it is more than 1.96 standard errors
+from zero, so each item has its own critical value, \eqn{1.96 \times SE}.
+The shaded bands summarize these across items, separately for each axis:
+\itemize{
+  \item the \strong{darker band} runs to the smallest critical value: an
+    estimate inside it would not be significant for any item;
+  \item the \strong{lighter band} runs to the largest: an estimate inside it
+    would be significant for some items but not others;
+  \item beyond both, an estimate would be significant for every item.
+}
+Thin grey lines mark the band edges, and solid black lines mark zero on
+each axis.
+The bands differ between the axes when one kind of effect is estimated more
+precisely than the other, e.g. because more people contribute to it.
+}
+
 \examples{
-d <- stabilityData(stabilitySim$T1, stabilitySim$T2, stabilitySim$experience,
-                   keep = "T1", fill = list(leader = 0))
-sp <- stabilityPaths(d, X = "leader", controls = "ses",
-                     reliability = stabilitySim$reliability)
-plot(sp)
-plot(sp, what = "share")
-plot(sp, item = "dominant")
+roles <- c("Powerful_role", "Persuasive_role", "Shy_role")
+d <- stabilityData(powerTraits$T1, powerTraits$T2, powerTraits$people,
+                   commonItems = c("power", roles))
+orgs <- paste0("org", LETTERS[2:7])
+d[orgs] <- lapply(LETTERS[2:7], function(o) as.numeric(d$org == o))
+sp <- stabilityPaths(d, items = roles, X = "power[T1]",
+                     controls = c("tenure", orgs))
+plot(sp, pool = list(organization = orgs))
+plot(sp, what = "share", pool = list(organization = orgs))
+plot(sp, item = "Powerful_role", show_controls = FALSE)
+plot(sp, type = "effects", labels = function(i) sub("_role$", "", i))
+}
+\references{
+Roberts, B. W., Caspi, A., & Moffitt, T. E. (2003). Work experiences and
+personality development in young adulthood. \emph{Journal of Personality
+and Social Psychology, 84}(3), 582--593.
 }
 \seealso{
 \code{\link{stabilityPaths}}

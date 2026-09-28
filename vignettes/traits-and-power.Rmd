@@ -1,0 +1,556 @@
+---
+title: "Cross-lagged effects: traits and social power"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Cross-lagged effects: traits and social power}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>", fig.width = 7,
+                      fig.height = 4.5, out.width = "100%",
+                      dev = if (requireNamespace("ragg", quietly = TRUE)) "ragg_png" else "png",
+                      dpi = 96, fig.retina = 2)
+```
+
+```{r setup}
+library(fancyr)
+```
+
+## The question
+
+People's traits and their experiences can shape each other. A trait can lead
+people into certain experiences (*selection*), and experiences can change
+traits (*change*, or socialization). Roberts, Caspi and Moffitt (2003)
+proposed a *corresponsive principle*: the traits that lead people into an
+experience tend to be the ones the experience then reinforces.
+
+When a trait and an experience are both measured at two times, a two-wave
+**cross-lagged panel model** estimates both directions at once. For each
+item (a trait), `crossLagPaths()` fits:
+
+| effect | path | question |
+|---|---|---|
+| **selection** | `X2 ~ Y1` | does the Time 1 trait predict the experience at Time 2, beyond the experience at Time 1? |
+| **change** | `Y2 ~ X1` | does the Time 1 experience predict the trait at Time 2, beyond the trait at Time 1? |
+| **stability** | `Y2 ~ Y1`, `X2 ~ X1` | how well does each variable predict itself? |
+| **T1 association** | `Y1 ~~ X1` | how are the two related at Time 1? |
+| **co-change** | `Y2 ~~ X2` | what do the Time 2 scores still share once everything at Time 1 is accounted for? |
+
+Corresponsiveness means that selection and change effects have the same sign.
+
+## The study
+
+This vignette works through the study behind Wood and Harms (2017). Members of
+seven fraternities and sororities were surveyed twice, a year or more apart.
+At each wave they described themselves on 59 trait adjectives, twice over:
+once as they see themselves **in general** (their *general identity*), and
+once as they see themselves **as a member of their organization** (their
+*role identity*). They also rated how much influence every member they knew
+had within the organization. A person's **social power** is the average of
+the influence ratings they received, typically from 20 to 50 other members,
+so it is a very dependable estimate.
+
+Wood and Harms asked two questions about traits and power over time:
+
+| path | question | in the cross-lagged model |
+|---|---|---|
+| **A** | Do traits predict *changes* in power? | selection: `power[T2] ~ Y1` |
+| **B** | Does power predict *changes* in traits? | change: `Y2 ~ power[T1]` |
+
+The answer was that the two directions differ: the relationship is
+*non-corresponsive*. Communal traits predicted gains in power (Path A), while
+power predicted gains in agentic role identities, such as seeing oneself as
+powerful and not shy (Path B).
+
+### Why a cross-lagged model?
+
+Here the experience, power, was measured at the same occasions as the
+traits: each wave's power comes from the influence ratings members made in
+that wave's survey. The cross-lagged model fits that design. Each path runs
+from one occasion to the next, and each variable's own earlier score is
+controlled.
+
+`stabilityPaths()` answers a different question: how much of an item's
+stability is carried by an experience that happens *between* the two
+measurements of the item, such as a job taken up or an office held during
+the interval. It treats the experience as coming after Time 1 and before
+Time 2. With power measured at Time 1, alongside the Time 1 self-ratings,
+that ordering would be assumed rather than observed, so that model is not
+used here.
+
+When each variable is measured matters for both models. The next sections
+look at when these people were measured.
+
+## The data
+
+`powerTraits` is a list. `T1` and `T2` hold each wave's data, one row per
+person, including the survey `date`. `people` holds fixed information about
+each person. `items` gives the agency and communion content of each
+adjective, as rated by judges.
+
+```{r}
+str(powerTraits, max.level = 1)
+powerTraits$T1[1:3, 1:8]
+head(powerTraits$people, 3)
+```
+
+Each wave has `power`, the 59 general-identity adjectives (`Kind`,
+`Dominant`, ...), the same adjectives as role identities (`Kind_role`, ...),
+and four profile scores: `communion`, `agency`, `communion_role` and
+`agency_role`. A profile score is the within-person correlation between a
+person's ratings on the 59 adjectives and the adjectives' communion (or
+agency) content. It is high for someone who endorses communal adjectives and
+rejects uncommunal ones. See `?powerTraits` for details.
+
+`stabilityData()` puts the pieces together. Items measured at both waves,
+named in `commonItems`, get `[T1]` and `[T2]` suffixes. Other columns found in
+only one wave are dropped by default, with a message; `keep = "T1"` or
+`keep = "all"` retain them. Further files, such as `people`, are joined on the
+ID. Given the name of a date column, `stabilityData()` also computes each
+person's `interval_days`.
+
+```{r}
+pt <- powerTraits
+adj <- pt$items$item
+d <- stabilityData(pt$T1, pt$T2, pt$people, date = "date",
+                   commonItems = c("power", "communion", "agency",
+                                   "communion_role", "agency_role",
+                                   adj, paste0(adj, "_role")))
+```
+
+### When were people measured?
+
+A cross-lagged effect describes what one variable predicts about another *a
+given time later*. Its size depends on that lag: over a short lag, a
+variable has little time to change, and over a very long one, the effect of
+Time 1 may have faded. So the lag belongs in any description of the results.
+
+```{r}
+round(t(sapply(split(d$interval_days, d$org), function(v)
+  c(people = sum(!is.na(v)), median = median(v, na.rm = TRUE),
+    min = min(v, na.rm = TRUE), max = max(v, na.rm = TRUE)))))
+```
+
+The organizations fall into two groups. A, C, E and F were first surveyed in
+spring 2004 and again about 12 months later. B, D and G were first surveyed
+in fall 2004 and again in spring 2006, about 16 to 17 months later. Within an
+organization, each wave's surveys were completed within about two months, so
+the interval varies much less within organizations than between the two
+groups.
+
+The estimates below therefore average over lags of about one year and about
+a year and a half. The organization dummies (below) absorb differences in
+average levels between organizations. They don't allow the effects
+themselves to differ with the lag. Note also that both organizations with ID
+linkage problems (B and D, see *How much do organizations B and D matter?*)
+are in the longer-lag group.
+
+### Who is in the sample?
+
+About half the Time 1 participants never answered the Time 2 survey, mostly
+because seniors graduated. By default, `stabilityData()` **keeps** them:
+
+```{r}
+has <- function(v) !is.na(d[[v]])
+c(everyone = nrow(d),
+  selfRatingsBothWaves = sum(has("communion[T1]") & has("communion[T2]")),
+  traitT1_powerT2      = sum(has("communion[T1]") & has("power[T2]")),
+  powerT1_traitT2      = sum(has("power[T1]") & has("communion[T2]")))
+```
+
+That's deliberate. `crossLagPaths()` estimates its models by *full
+information maximum likelihood* (FIML), which uses every value each person
+has. Someone seen only at Time 1 still tells us about the Time 1 distribution
+and about how Time 1 scores relate to power and the controls. Here that
+matters doubly, because power comes from other members' ratings: many people
+who skipped the Time 2 survey still have Time 2 power. As the counts show,
+more people link a Time 1 trait to Time 2 power (the data behind selection)
+than link Time 1 power to a Time 2 trait (the data behind change).
+
+Dropping incomplete cases (listwise deletion, `join = "inner"`) is unbiased
+only if dropout is *missing completely at random*: unrelated to anything,
+measured or not. FIML only needs dropout to be *missing at random*: it may
+depend on observed things like Time 1 scores, as long as it doesn't further
+depend on the unobserved Time 2 score itself (Rubin, 1976; Schafer & Graham,
+2002; Enders, 2010). The *Missing data* section of `?stabilityData` has more
+detail and references.
+
+### Controls: organization and tenure
+
+Organizations differ in their average power and in how their members see
+themselves, and Wood and Harms controlled for organization in every analysis
+with dummy codes. We do the same: six indicator variables, with organization A
+as the reference, join the controls, along with `tenure`, the years a person
+had been a member at Time 1.
+
+```{r}
+orgs <- paste0("org", LETTERS[2:7])
+d[orgs] <- lapply(LETTERS[2:7], function(o) as.numeric(d$org == o))
+ctrl <- c("tenure", orgs)
+```
+
+Organizations are single-sex, so the dummies also control for gender. The
+controls predict both Time 2 variables. Each dummy also has its own pathway
+in the stability decompositions described below. To keep the printed tables
+readable, `print()` and `plot()` can combine them with
+`pool = list(organization = orgs)`. This affects the display only.
+
+## Cross-lagged effects of the trait profiles
+
+Wood and Harms focused on the overall communion and agency of people's trait
+profiles. `crossLagPaths()` fits one model per profile, with power as `X`:
+
+```{r}
+profiles <- c("communion", "agency", "communion_role", "agency_role")
+clP <- crossLagPaths(d, items = profiles, X = "power", controls = ctrl)
+print(clP, pool = list(organization = orgs))
+```
+
+Communion predicts gains in power: the selection effect is .18 (Wood and
+Harms reported a partial correlation of .20), and .15 for the communion of
+role identities. Agency, although it is the stronger *concurrent* correlate
+of power (the T1 association), predicts gains more weakly and not
+significantly (.10; the paper reported .08). Power predicts no significant
+change in any profile. This is the non-corresponsive pattern: the traits
+power seems to foster are not the ones that earn it.
+
+Each fit also decomposes *both* stabilities into additive parts, which sum to
+the total (in this standardized metric, the retest correlation). The item's
+stability gains a cross-lagged pathway through `power[T1]` (the T1
+association times the change effect). Power's stability gains one through
+`Y1` (the T1 association times the selection effect). Both are small here,
+at 7% or less of either total. A trait can predict *change* in power without
+accounting for much of power's *continuity*. Tenure matters more to power's
+stability: longer-serving members had more power at Time 1 but tended to lose
+some of it over the interval, as seniors made way for the next cohort.
+
+The co-change is left undecomposed. It collects whatever the Time 2 scores
+share beyond what Time 1 predicts. For the agency of role identities it is
+.30: members whose role identities became more agentic also gained power
+over the same interval. The model can't say whether one change caused the
+other, or whether something else moved both.
+
+`summary(clP)` gives standard errors, confidence intervals and p-values for
+every effect and pathway, and `plot(clP, type = "bars")` draws the two
+decompositions side by side.
+
+### Communion and agency together
+
+Profile communion and agency are highly correlated (about .8), because many
+adjectives are desirable in both senses. Adding the other profile's Time 1
+score to the controls asks which one matters once the other is held
+constant:
+
+```{r}
+jc <- crossLagPaths(d, items = "communion", X = "power",
+                    controls = c("agency[T1]", ctrl))
+ja <- crossLagPaths(d, items = "agency", X = "power",
+                    controls = c("communion[T1]", ctrl))
+sel <- function(x) x$effects[x$effects$effect == "selection",
+                             c("item", "path", "est", "se", "pvalue")]
+rbind(sel(jc), sel(ja))
+```
+
+Communion carries the effect (.31). Holding communion constant, agency, if
+anything, predicts *losing* power (−.16). This matches the lower half of Wood
+and Harms's Table 1. Because the two profiles overlap so heavily, these
+coefficients have larger standard errors than either profile alone.
+
+## Adjusting for retest reliability
+
+A single answer reflects the particular occasion as well as where the person
+usually stands. That matters for both cross-lagged paths. The change effect
+asks whether power predicts Time 2 self-ratings *over and above* Time 1
+self-ratings. A single Time 1 answer only partly controls for the person's
+expected score around Time 1. The rest of that expected score can be
+credited to power, whenever power is related to it. Wood and Harms raised
+exactly this concern about their Path B estimates. The selection effect is
+affected in the other direction: occasion-specific influences on the Time 1
+self-rating dilute its relation to later power.
+
+If you know a variable's reliability, ideally a retest correlation over a few
+weeks (see *Choosing a reliability* below), supply it. The variable is then
+modelled as a latent variable measured with that reliability. Any variable
+can be adjusted: the items, `X` (by its base name for both waves, as in
+`power = .93`, or one wave at a time, as in `"power[T1]" = .93`), and the
+controls. Anything not named is analysed as observed.
+
+## Choosing a reliability
+
+An item given a reliability stands for the person's *expected score* on it
+over some interval *t*: roughly, the average of the answers they would give if
+asked repeatedly across that span. Nothing assumes the expected score is
+fixed. It can change between the waves, which is exactly what the model
+studies. The reliability to supply is the share of variance in a single
+answer that is shared with the expected score over *t*.
+
+A retest correlation over an interval of about *t* estimates this directly
+(Wood et al., 2023). Whatever contributes to both answers, meaning whatever
+persists over *t*, is part of the expected score. Influences that come and go
+within *t*, such as mood, the day's circumstances, or remembering an answer
+given a moment ago, still shape each answer systematically. They just aren't
+part of the expected score over *t*. As *t* stretches from an hour to a day,
+a week, a month or a year, more of what lies behind an answer has the chance
+to change, and retest correlations fall (Watson, 2004).
+
+So choosing *t* decides what the adjusted results describe:
+
+- **Short *t*.** With a same-session retest, or one a few days or a week
+  apart, nearly everything behind an answer persists. The reliability is high
+  and the adjustment small, and the adjusted results still describe scores
+  tied to the particular occasion.
+- **Long *t*.** As *t* approaches the gap between the waves, the change the
+  model is meant to study gets folded into the reliability, and the
+  adjustment does too much. If you use the Time 1–Time 2 retest correlation
+  itself, the adjusted stability is 1 by construction.
+- **In between.** Long enough that what is specific to an occasion has turned
+  over, but short relative to the interval being studied. For waves a year
+  apart, retest correlations over two to four weeks are a reasonable target.
+
+Internal consistency (alpha) fits the same logic, because its items are
+answered at different moments too, typically about a minute apart. Alpha is
+often called an underestimate of reliability. What it underestimates is the
+retest reliability of those items *over that short interval*. If two items
+answered about a minute apart give an alpha of .80, each item's own retest
+correlation over a minute (averaged, say, as a geometric mean) should exceed
+.80. Over longer intervals such as two weeks, observed retest correlations are
+regularly *lower* than alpha (McCrae et al., 2011; Chmielewski & Watson,
+2009). So alpha isn't a suitable value for waves months or years apart, and a
+single item has no alpha anyway.
+
+The reliability of power is a different kind of number. Because power
+averages many raters, the reliability of each person's average is about .93
+(the mean across organizations, estimated from how much raters agreed). It
+describes how much a person's average would change with a different set of
+raters, not with a different occasion. Over a few weeks, few members' power
+is likely to shift much, so it serves as a reasonable approximation here, but
+the two quantities are not the same.
+
+Suitable retest values often don't exist for the items you have. Published
+retest correlations for similar items or measures can suggest a range, and
+the sensitivity analysis below shows whether the conclusions hold across it.
+
+## How much does the modeled reliability matter?
+
+Standard errors treat a supplied reliability as known, but it's an estimate
+too, and conclusions can depend on it. `reliabilitySensitivity()` refits the
+analysis across a grid of reliabilities for the items, keeping the rest as
+they were (here power is observed, as in the paper), and records the effects
+with their standard errors at each value. A value of 1 is the analysis
+without adjusting the items.
+
+```{r, fig.width = 8, fig.height = 4.5}
+sens <- reliabilitySensitivity(clP, rel = c(.7, .85, 1))
+sens
+plot(sens)
+```
+
+Filled points have p < .05, and bars are 95% confidence intervals. Modeling
+the profiles as less reliable strengthens communion's selection effect a
+little (from .18 to .22 at a reliability of .70), and it stays significant.
+The change effects shrink to about zero. Both halves of the non-corresponsive
+pattern hold up under adjustment.
+
+## Selection and change effects across all adjectives
+
+Profiles summarize many adjectives at once. To see the adjectives
+individually, `plot()` of a cross-lagged fit places each item by its
+selection effect (horizontal) and change effect (vertical). Here are all 59
+role identities, first without adjustment, then modeling each adjective's
+reliability as .70 and power's as .93:
+
+```{r}
+roleAll <- paste0(adj, "_role")
+clObs <- crossLagPaths(d, items = roleAll, X = "power", controls = ctrl)
+clLat <- crossLagPaths(d, items = roleAll, X = "power", controls = ctrl,
+                       reliability = c(setNames(rep(.7, length(roleAll)), roleAll),
+                                       power = .93))
+lim <- max(abs(unlist(lapply(list(clObs, clLat), function(x)
+  x$effects$est[x$effects$effect %in% c("selection", "change")])))) * 1.08
+shortName <- function(i) sub("_role$", "", i)
+```
+
+The same `xlim` and `ylim` put both plots on the same scale:
+
+```{r, fig.height = 7.5}
+plot(clObs, labels = shortName,
+     xlim = c(-lim, lim), ylim = c(-lim, lim), title = "No reliability adjustment")
+```
+
+```{r, fig.height = 7.5}
+plot(clLat, labels = shortName,
+     xlim = c(-lim, lim), ylim = c(-lim, lim),
+     title = "Modeled reliability of .70 for each adjective")
+```
+
+Both axes share one range, so selection and change effects of the same size
+sit the same distance from zero. A point's fill shows which effects reached
+p < .05: blue for change only, orange for selection only, black for both,
+white for neither.
+
+The shading shows where significance is possible. An estimate is significant
+when it is more than 1.96 standard errors from zero, so every adjective has
+its own critical value. Inside the darker band, an estimate would not be
+significant for *any* adjective. In the lighter band, it would be for some
+adjectives but not others. Beyond both, it would be significant for all of
+them. Thin gray lines mark the band edges, so a point near zero on one axis
+can still be read against the critical values of the other.
+
+The bands are narrower for selection than for change. Selection effects are
+estimated more precisely because more people contribute to them: Time 2
+power is known for many members who skipped the Time 2 survey, while change
+needs a Time 2 self-rating. So a selection effect of a given size is more
+easily detected than a change effect of the same size, and a null selection
+effect here is more informative than a null change effect.
+
+Each plot's bands come from its own analysis, and they are wider under the
+reliability adjustment: roughly ±.13 to ±.18 for selection and ±.18 to ±.24
+for change, against ±.10 to ±.13 and ±.13 to ±.16 without it. The adjustment
+adds no information about anyone's scores. It rescales the relationships to
+what they would be among expected scores, and it rescales their sampling
+error along with them. The standard errors grow by about 30%, more than the
+estimates do. The adjusted Time 1 trait also overlaps more with Time 1 power,
+so each cross-lagged path rests on less information that is unique to it. An
+effect therefore has to be larger to reach significance once reliability is
+modeled. That is why fewer change effects are significant at .70, even though
+most estimates move only a little.
+
+Points in the upper-right and lower-left quadrants would be *corresponsive*
+(Roberts, Caspi, & Moffitt, 2003): the trait would earn power, and power
+would push it further in the same direction. That isn't what the data show.
+Without adjustment, 19 adjectives have a significant change effect. Power
+raises agentic and extraverted role identities, such as *powerful*,
+*persuasive*, *verbal*, *dominant* and *extraverted*. It lowers *shy*,
+*quiet*, *introverted* and *reserved*, and also *relaxed*, *careless* and
+*unemotional*. Yet none of these adjectives predicts *gaining* power: they sit
+inside the selection bands. Only four have significant selection effects:
+*sympathetic* (positive), and *cold*, *temperamental* and *moody*
+(negative). The traits that earn power are communal and even-tempered, and
+the traits power fosters are agentic. Across the 59 adjectives, selection
+and change effects correlate only .10.
+
+At a modeled reliability of .70, ten change effects remain significant, led
+by *shy*, *relaxed*, *powerful* and *careless*. Only *cold* and
+*temperamental* still predict (losing) power.
+
+### Role and general identities
+
+Role experiences should affect role identities first (Wood & Roberts, 2006).
+The same adjectives rated as general identities show whether power's effects
+reach how people see themselves in general:
+
+```{r}
+someAdj <- c("Powerful", "Persuasive", "Assertive", "Shy", "Relaxed")
+chg <- function(x) round(x$effects$est[x$effects$effect == "change"], 3)
+clRole <- crossLagPaths(d, items = paste0(someAdj, "_role"), X = "power",
+                        controls = ctrl)
+clGen  <- crossLagPaths(d, items = someAdj, X = "power", controls = ctrl)
+data.frame(adjective = someAdj, role = chg(clRole), general = chg(clGen))
+```
+
+Except for *persuasive* (.18, p < .05), power's change effects on how people
+see themselves in general are much weaker than on their role identities, and
+none of the others is significant.
+
+## How much do organizations B and D matter?
+
+Two organizations have a problem with how IDs link records. In organization D,
+the IDs on Time 1 surveys don't appear to match the IDs of the same people on
+the Time 1 influence roster. In organization B, roster IDs don't appear to
+refer to the same people at the two waves. The evidence is summarized in
+`?powerTraits`; `people$linkageIssue` flags both organizations.
+
+Both were included in the published analyses, and including them reproduces
+the published results closely. Refitting without them shows how much the
+conclusions depend on them. Without B and D, their dummies are all zero, so
+they leave the controls:
+
+```{r}
+dBD <- d[!d$linkageIssue, ]
+ctrlBD <- setdiff(ctrl, c("orgB", "orgD"))
+keyEffects <- function(dat, ctrl) {
+  f <- crossLagPaths(dat, items = c("communion", "agency", "Powerful_role", "Shy_role"),
+                     X = "power", controls = ctrl)
+  e <- f$effects[f$effects$effect %in% c("selection", "change"), ]
+  setNames(e$est, paste(e$item, e$effect))
+}
+round(cbind(allOrganizations = keyEffects(d, ctrl),
+            withoutBandD     = keyEffects(dBD, ctrlBD)), 3)
+```
+
+Without B and D, power's change effects on the role identities hold up. The
+selection effect of communion is weaker (.13), in a smaller sample. The change
+effects of power on the two profiles are larger (.14 and .12), so the
+conclusion that power leaves overall communion and agency unchanged is less
+secure without these organizations. Dropping them also removes two of the
+three longer-lag organizations, so the comparison mixes the linkage problem
+with the lag. Whether B and D should be kept depends on whether their ID
+links can be verified; until then, it is worth reporting results both ways.
+
+## Cautions
+
+- **The lag.** Cross-lagged effects are specific to the interval between
+  measurements. Here that is about a year for some organizations and about a
+  year and a half for others. Effects over a month or five years could be
+  quite different.
+- **Stable differences between people.** The two-wave cross-lagged model
+  treats each person's Time 1 score as the whole of what carries forward. If
+  people also differ in stable ways that affect both variables, the
+  cross-lagged paths can partly reflect those differences rather than
+  within-person change (Hamaker, Kuiper, & Grasman, 2015). Separating the two
+  needs three or more waves.
+- **Unmeasured confounding.** Controls address only the confounders you
+  measure. A Time 1 variable left out of `controls` that affects both
+  Time 2 variables can masquerade as a cross-lagged effect.
+- **Co-change is not an effect.** A large co-change says the two variables
+  moved together during the interval. It doesn't say which moved which, or
+  whether a third variable moved both.
+- **Shares are shares of stability**, not of variance in Time 2 scores, and
+  totals near zero make shares unstable. Read shares alongside the estimates.
+- **Binary variables**, such as whether someone held an office, should not
+  be given a reliability: a record of whether something happened isn't one
+  answer sampled from a range of answers a person might give.
+
+## References
+
+Chmielewski, M., & Watson, D. (2009). What is being assessed and why it
+matters: The impact of transient error on trait research. *Journal of
+Personality and Social Psychology, 97*(1), 186--202.
+
+Enders, C. K. (2010). *Applied missing data analysis*. Guilford Press.
+
+Hamaker, E. L., Kuiper, R. M., & Grasman, R. P. P. P. (2015). A critique of
+the cross-lagged panel model. *Psychological Methods, 20*(1), 102--116.
+
+McCrae, R. R., Kurtz, J. E., Yamagata, S., & Terracciano, A. (2011).
+Internal consistency, retest reliability, and their implications for
+personality scale validity. *Personality and Social Psychology Review,
+15*(1), 28--50.
+
+Roberts, B. W., Caspi, A., & Moffitt, T. E. (2003). Work experiences and
+personality development in young adulthood. *Journal of Personality and Social
+Psychology, 84*(3), 582--593.
+
+Rubin, D. B. (1976). Inference and missing data. *Biometrika, 63*(3), 581--592.
+
+Schafer, J. L., & Graham, J. W. (2002). Missing data: Our view of the state of
+the art. *Psychological Methods, 7*(2), 147--177.
+
+Watson, D. (2004). Stability versus change, dependability versus error:
+Issues in the assessment of personality over time. *Journal of Research in
+Personality, 38*(4), 319--350.
+
+Wood, D., & Harms, P. D. (2017). Evidence of non-corresponsive causal
+relationships between personality traits and social power over time.
+*Personality and Social Psychology Bulletin, 43*(1), 33--45.
+
+Wood, D., Lowman, G. H., Armstrong, B. F., III, & Harms, P. D. (2023). Using
+retest-adjusted correlations as indicators of the semantic similarity of
+items. *Journal of Personality and Social Psychology, 125*(2), 437--454.
+https://doi.org/10.1037/pspp0000441
+
+Wood, D., & Roberts, B. W. (2006). Cross-sectional and longitudinal tests of
+the Personality and Role Identity Structural Model (PRISM). *Journal of
+Personality, 74*(3), 779--809.

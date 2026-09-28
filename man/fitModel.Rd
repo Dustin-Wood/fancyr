@@ -44,12 +44,14 @@ A named list with components:
   columns declared in \code{spec$extract}, plus \code{est}, \code{se},
   \code{pvalue}, \code{ci.lower}, \code{ci.upper}. A \code{share} column
   (each estimate divided by the total) is added when the spec extracts a row
-  of type \code{"total"}.}
+  of type \code{"total"}. If \code{spec$extract} has an \code{outcome}
+  column, as when a spec decomposes more than one total, each row's share
+  is taken of the total with the same \code{outcome}.}
 \item{coefficients}{Data frame of all structural coefficients
   (\code{~} and off-diagonal \code{~~}), labelled with original names, in
   the requested metric.}
-\item{total}{The \code{"total"} estimate if the spec defines one, otherwise
-  \code{NA}.}
+\item{total}{The \code{"total"} estimate if the spec defines one (the first,
+  if it defines several), otherwise \code{NA}.}
 \item{n}{Number of observations used.}
 \item{converged}{Logical.}
 \item{admissible}{Logical: \code{FALSE} if the solution has negative
@@ -110,16 +112,16 @@ residual variance). Such fits are returned with their estimates, but with
 }
 
 \examples{
-spec <- stabilityModel(X = "leader", controls = "ses")
-d <- stabilityData(stabilitySim$T1, stabilitySim$T2, stabilitySim$experience,
-                   keep = "T1", fill = list(leader = 0))
-bind <- c(Y1 = "dominant[T1]", Y2 = "dominant[T2]")
+spec <- stabilityModel(X = "power[T1]", controls = "tenure")
+d <- stabilityData(powerTraits$T1, powerTraits$T2, powerTraits$people,
+                   commonItems = c("power", "Powerful_role"))
+bind <- c(Y1 = "Powerful_role[T1]", Y2 = "Powerful_role[T2]")
 
 # observed variables
 fitModel(spec, d, bind, metric = "std")$paths
 
-# the same model with Y1 and Y2 corrected for unreliability
-fitModel(spec, d, bind, reliability = c(Y1 = .7, Y2 = .7), metric = "std")$paths
+# the same model with Y1 and Y2 adjusted for retest reliability
+fitModel(spec, d, bind, reliability = c(Y1 = .75, Y2 = .75), metric = "std")$paths
 
 }
 \seealso{

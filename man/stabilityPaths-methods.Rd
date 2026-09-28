@@ -7,7 +7,7 @@
 \alias{print.summary.fancyStability}
 \title{Print, Summarize, and Plot a Stability Decomposition}
 \usage{
-\method{print}{fancyStability}(x, digits = 2, ...)
+\method{print}{fancyStability}(x, digits = 2, pool = NULL, ...)
 
 \method{summary}{fancyStability}(object, ...)
 
@@ -18,6 +18,13 @@
 \code{\link{stabilityPaths}}.}
 
 \item{digits}{Number of decimal places to print.}
+
+\item{pool}{Optional named list of variable sets whose pathways should be
+shown combined, e.g. \code{list(organization = c("orgB", "orgC"))} to
+show one \code{via organization} column instead of one per dummy code.
+Display only: the model, its degrees of freedom, and \code{summary()} are
+unaffected. Pathways are additive, so the combined estimate and share are
+sums, and the parts still add to the total.}
 
 \item{...}{Further arguments; for \code{plot()} with \code{item}, passed to
 the path-diagram options below.}
