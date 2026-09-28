@@ -1,9 +1,9 @@
 Package: fancyr
 Type: Package
-Title: Fancy Statistics for Correlational (r) Analyses 
+Title: Fancy Statistics for Correlational (r) Analyses
 Version: 0.1.0
-Author: Dustin Wood
-Maintainer: Dustin Wood <dustin.wood@cba.ua.edu>
+Authors@R: person("Dustin", "Wood", email = "dustinwood79@gmail.com",
+                  role = c("aut", "cre"))
 Description: Provides functions for correlational and measurement analyses,
     including reliability-adjusted correlation matrices, scale-centered correlations
     (Cohen, 1969), clusters of validity-relevant items, dimensionality assessment,
@@ -44,4 +44,4 @@ Suggests:
     glmnet
 VignetteBuilder: knitr
 Config/roxygen2/version: 8.0.0
-RoxygenNote: 7.3.3
+RoxygenNote: 8.0.0

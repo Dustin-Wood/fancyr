@@ -1,4 +1,4 @@
-# fancyr (development)
+# fancyr 0.1.0
 
 ## Parallel processing
 
