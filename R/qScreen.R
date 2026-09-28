@@ -37,8 +37,9 @@
 #'   column names are uninformative, to identify) the five block columns. It
 #'   should be a data frame with a \code{qname} column matching
 #'   \code{colnames(data)} and a \code{sub} column giving each column's
-#'   human-readable label -- i.e. the \code{*_colmap} object produced alongside
-#'   the data by \code{\link{colmap}}. When supplied, the labels at the
+#'   human-readable label -- i.e. the \code{colmap} returned alongside the data
+#'   by \code{\link{fetch_survey_plus}} (built by
+#'   \code{\link{extract_colmapPlus}}). When supplied, the labels at the
 #'   specified \code{cols} must match the Qualtrics block labels
 #'   (\emph{Display Order}, \emph{First Click}, \emph{Last Click},
 #'   \emph{Page Submit}, \emph{Click Count}); a mismatch stops with an error,
@@ -146,7 +147,7 @@ qScreen <- function(data, cols, smin, smax, items = NULL,
     cmap <- check.names.in
     if (!all(c("qname", "sub") %in% names(cmap))) {
       stop("`check.names.in` must be a column map with `qname` and `sub` ",
-           "columns (as produced by colmap()).")
+           "columns (the `colmap` returned by fetch_survey_plus()).")
     }
     labels <- as.character(cmap$sub[match(blockNames, cmap$qname)])
     if (anyNA(labels)) {
