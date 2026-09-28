@@ -341,8 +341,11 @@ they were (here power is observed, as in the paper), and records the effects
 with their standard errors at each value. A value of 1 is the analysis
 without adjusting the items.
 
+Refitting across a grid takes a while, so this call spreads the work over
+two CPU cores with `cores = 2` (see *Speeding up many fits* below).
+
 ```{r, fig.width = 8, fig.height = 4.5}
-sens <- reliabilitySensitivity(clP, rel = c(.7, .85, 1))
+sens <- reliabilitySensitivity(clP, rel = c(.7, .85, 1), cores = 2)
 sens
 plot(sens)
 ```
@@ -363,10 +366,12 @@ reliability as .70 and power's as .93:
 
 ```{r}
 roleAll <- paste0(adj, "_role")
-clObs <- crossLagPaths(d, items = roleAll, X = "power", controls = ctrl)
+clObs <- crossLagPaths(d, items = roleAll, X = "power", controls = ctrl,
+                       cores = 2)
 clLat <- crossLagPaths(d, items = roleAll, X = "power", controls = ctrl,
                        reliability = c(setNames(rep(.7, length(roleAll)), roleAll),
-                                       power = .93))
+                                       power = .93),
+                       cores = 2)
 lim <- max(abs(unlist(lapply(list(clObs, clLat), function(x)
   x$effects$est[x$effects$effect %in% c("selection", "change")])))) * 1.08
 shortName <- function(i) sub("_role$", "", i)
@@ -488,6 +493,19 @@ secure without these organizations. Dropping them also removes two of the
 three longer-lag organizations, so the comparison mixes the linkage problem
 with the lag. Whether B and D should be kept depends on whether their ID
 links can be verified; until then, it is worth reporting results both ways.
+
+## Speeding up many fits
+
+Each item's model is fitted separately, and a model with several controls
+takes a few seconds, so 59 adjectives take a few minutes. The fits don't
+depend on each other, so `cores` shares them among background R sessions:
+this vignette uses two, the most allowed when it is built for CRAN. On your
+own computer, `parallel::detectCores()` reports how many cores it has, and
+using more cuts the time further. The results are the same whatever the
+number of cores. On Windows, the first use may bring up a firewall prompt
+(the connection stays on your computer); if the background sessions can't
+start, the fits run on one core with a warning. See "Parallel processing" in
+`?lassoLoops`.
 
 ## Cautions
 
