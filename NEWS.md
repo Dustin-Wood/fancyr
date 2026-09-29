@@ -1,5 +1,30 @@
 # fancyr 0.1.0
 
+## Variables on very different scales
+
+* `fitModel()` (and so `stabilityPaths()`, `crossLagPaths()` and
+  `modelOnAllY()`) now fits each model to columns divided by their standard
+  deviations and converts raw-metric estimates back to the original units
+  (`rescale = TRUE`, the default). Results are unchanged, but a control on a
+  very large scale (e.g. a composite in the tens of thousands beside 0/1
+  dummies) no longer leaves lavaan unable to compute standard errors. Fits
+  also converge in fewer iterations.
+* New `binary` argument (`stabilityPaths()`, `crossLagPaths()`,
+  `modelOnAllY()`, `fitModel()`). With `binary = "unit"`, binary
+  experiences and controls (exactly two distinct values, e.g. 0/1) have
+  their standardized coefficients reported per 1 vs 0: a change effect
+  `Y2 ~ X` is the difference in `Y2`, in SDs, between those with and
+  without the experience, and a selection effect `X ~ Y1` the change in the
+  proportion with it per SD of `Y1`. The default, `binary = "sd"`, keeps
+  every coefficient fully standardized, so effect sizes stay comparable
+  across variables. Pathways, totals and shares are the same either way, and
+  with `"unit"`, `print()` lists the variables treated as binary.
+* Selection-versus-change scatterplot: significance-band edges are now
+  dashed.
+* When standard errors can't be computed, the item's status now says so
+  instead of "Success", and `print()` marks the item with `*`. lavaan's
+  warning is no longer repeated once per item.
+
 ## Parallel processing
 
 * `lassoLoops()`, `crossLagPaths()`, `stabilityPaths()`, `modelOnAllY()` and

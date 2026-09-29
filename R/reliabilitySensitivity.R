@@ -108,7 +108,8 @@ reliabilitySensitivity <- function(x, rel = seq(.5, 1, .1),
     fit <- refit(x$data, items = items, X = s$X, controls = s$controls,
                  reliability = relv, metric = s$metric,
                  suffixes = unname(s$suffixes), missing = s$missing,
-                 cores = oc$cores)
+                 cores = oc$cores,
+                 binary = if (is.null(s$binary)) "sd" else s$binary)
     adm <- function(it) fit$status$admissible[match(it, fit$status$item)]
     p <- fit$paths
     e <- if (crossLag) fit$effects else effectTable(fit)

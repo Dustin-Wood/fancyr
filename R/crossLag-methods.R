@@ -6,7 +6,8 @@ crossLagHeader <- function(x) {
     sprintf("  controls: %s", if (length(s$controls)) paste(s$controls, collapse = ", ") else "none"),
     sprintf("  latent:   %s", relText(s)),
     sprintf("  metric:   %s   missing: %s",
-            if (s$metric == "std") "standardized" else "raw", s$missing))
+            if (s$metric == "std") "standardized" else "raw", s$missing),
+    if (!is.null(b <- binaryText(x))) sprintf("  binary:   %s", b))
 }
 
 # The effects shown in print(), in order, with their column headings.
@@ -68,7 +69,7 @@ print.fancyCrossLag <- function(x, digits = 2, pool = NULL, ...) {
   tab <- vapply(seq_len(nrow(cc)), function(k)
     vapply(items, cell, character(1), k = k), character(length(items)))
   tab <- matrix(tab, nrow = length(items), dimnames = list(NULL, cc$heading))
-  flag <- admFlag(x$summary$admissible)
+  flag <- admFlag(x$summary$admissible, x$summary$status)
   out <- data.frame(item = paste0(x$summary$item, flag), n = x$summary$n, tab,
                     check.names = FALSE, stringsAsFactors = FALSE)
 
@@ -90,11 +91,7 @@ print.fancyCrossLag <- function(x, digits = 2, pool = NULL, ...) {
                 if (o == "item") "each item" else o))
     print(blk, row.names = FALSE, right = FALSE)
   }
-  if (any(flag == " !"))
-    cat("\n  ! inadmissible solution (e.g. adjusted stability > 1); see $status.",
-        "\n    The reliability supplied is probably too low for that item.\n")
-  if (any(flag == " ?"))
-    cat("\n  ? model not estimated; see $status.\n")
+  flagNotes(flag)
   invisible(x)
 }
 

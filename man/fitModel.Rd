@@ -10,7 +10,9 @@ fitModel(
   bind,
   reliability = NULL,
   metric = c("raw", "std"),
-  return_fit = FALSE
+  return_fit = FALSE,
+  rescale = TRUE,
+  binary = c("sd", "unit")
 )
 }
 \arguments{
@@ -36,7 +38,32 @@ delta-method standard errors. With latent roles, \code{"std"} standardizes
 the latent variables, so correlations are disattenuated.}
 
 \item{return_fit}{Logical. If \code{TRUE}, include the fitted lavaan object
-in \code{$fit}. Defaults to \code{FALSE}.}
+in \code{$fit}. Defaults to \code{FALSE}. With \code{rescale = TRUE}, that
+object was fitted to the SD-scaled columns.}
+
+\item{rescale}{Logical. Fit the model to columns divided by their standard
+deviations, then convert raw-metric estimates back to the columns' own
+units? Default \code{TRUE}. The results are the same either way, but
+variables on very different scales (e.g. a 0/1 dummy beside a score in
+the tens of thousands) can otherwise make the information matrix
+numerically singular, so that no standard errors can be computed. Set
+\code{FALSE} for a hand-written spec that fixes parameters to nonzero
+values in the columns' own units.}
+
+\item{binary}{How to express, in the standardized metric, the
+coefficients of a \emph{binary} variable: any fixed role (such as an
+experience or control, not a sliding item) with exactly two distinct
+values, analysed as observed. \code{"sd"} (default) standardizes them like
+every other variable, so all coefficients share one metric and their
+sizes can be compared. \code{"unit"} instead reports them per difference
+between the two values, i.e. per 1 vs 0 for 0/1 or
+\code{FALSE}/\code{TRUE} coding: a binary predictor's coefficient is the
+expected difference in the outcome, in the outcome's SDs, between the two
+groups; a binary outcome's coefficient is the change in the proportion
+coded 1 per SD of the predictor. These read naturally but aren't on the
+same scale as the other coefficients. Covariances stay correlations, and pathways,
+totals and shares are the same either way. The raw metric is unaffected.
+\code{$varmap$binary} records which variables were treated as binary.}
 }
 \value{
 A named list with components:

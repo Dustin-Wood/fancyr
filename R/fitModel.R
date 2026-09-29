@@ -61,7 +61,30 @@
 #'   delta-method standard errors. With latent roles, \code{"std"} standardizes
 #'   the latent variables, so correlations are disattenuated.
 #' @param return_fit Logical. If \code{TRUE}, include the fitted lavaan object
-#'   in \code{$fit}. Defaults to \code{FALSE}.
+#'   in \code{$fit}. Defaults to \code{FALSE}. With \code{rescale = TRUE}, that
+#'   object was fitted to the SD-scaled columns.
+#' @param binary How to express, in the standardized metric, the
+#'   coefficients of a \emph{binary} variable: any fixed role (such as an
+#'   experience or control, not a sliding item) with exactly two distinct
+#'   values, analysed as observed. \code{"sd"} (default) standardizes them like
+#'   every other variable, so all coefficients share one metric and their
+#'   sizes can be compared. \code{"unit"} instead reports them per difference
+#'   between the two values, i.e. per 1 vs 0 for 0/1 or
+#'   \code{FALSE}/\code{TRUE} coding: a binary predictor's coefficient is the
+#'   expected difference in the outcome, in the outcome's SDs, between the two
+#'   groups; a binary outcome's coefficient is the change in the proportion
+#'   coded 1 per SD of the predictor. These read naturally but aren't on the
+#'   same scale as the other coefficients. Covariances stay correlations, and pathways,
+#'   totals and shares are the same either way. The raw metric is unaffected.
+#'   \code{$varmap$binary} records which variables were treated as binary.
+#' @param rescale Logical. Fit the model to columns divided by their standard
+#'   deviations, then convert raw-metric estimates back to the columns' own
+#'   units? Default \code{TRUE}. The results are the same either way, but
+#'   variables on very different scales (e.g. a 0/1 dummy beside a score in
+#'   the tens of thousands) can otherwise make the information matrix
+#'   numerically singular, so that no standard errors can be computed. Set
+#'   \code{FALSE} for a hand-written spec that fixes parameters to nonzero
+#'   values in the columns' own units.
 #'
 #' @return A named list with components:
 #' \item{paths}{Data frame of the extracted parameters, carrying any annotation
@@ -107,12 +130,14 @@
 #' @importFrom lavaan sem parameterestimates standardizedSolution nobs lavInspect
 #' @importFrom stats setNames var
 fitModel <- function(spec, data, bind, reliability = NULL,
-                     metric = c("raw", "std"), return_fit = FALSE) {
+                     metric = c("raw", "std"), return_fit = FALSE,
+                     rescale = TRUE, binary = c("sd", "unit")) {
 
   if (!inherits(spec, "fancyModel"))
     stop("`spec` must be a fancyModel object (see ?fancyModel).")
   if (!is.data.frame(data)) stop("`data` must be a data frame.")
   metric <- match.arg(metric)
+  binary <- match.arg(binary)
 
   ## ---- bind roles to columns ---------------------------------------------
   if (is.null(names(bind)) || any(!nzchar(names(bind))))
@@ -155,6 +180,28 @@ fitModel <- function(spec, data, bind, reliability = NULL,
   d <- data[, columns, drop = FALSE]
   names(d) <- roles
   d[] <- lapply(d, as.numeric)
+
+  # Binary variables: fixed roles (not the sliding items) with exactly two
+  # distinct values, analysed as observed. In the standardized metric their
+  # coefficients are reported per difference between the two values (per
+  # 1 vs 0) rather than per SD; see below. `binD` is that difference.
+  binD <- vapply(roles, function(r) {
+    u <- unique(d[[r]][!is.na(d[[r]])])
+    if (!(r %in% spec$slide) && length(u) == 2L && is.na(rel[[r]])) abs(diff(u))
+    else NA_real_
+  }, numeric(1))
+  varmap$binary <- !is.na(binD[roles])
+
+  # Fit on SD-scaled columns, so that variables on very different scales
+  # (e.g. a 0/1 dummy beside a score in the tens of thousands) don't leave
+  # the information matrix numerically singular. Scaling only (no centering)
+  # keeps every raw-metric estimate a simple multiple of its scaled value;
+  # see unscaleEstimates().
+  sc <- stats::setNames(rep(1, length(roles)), roles)
+  if (rescale) for (r in roles) {
+    s <- stats::sd(d[[r]], na.rm = TRUE)
+    if (is.finite(s) && s > 0) { sc[[r]] <- s; d[[r]] <- d[[r]] / s }
+  }
 
   ## ---- measurement model for latent roles ---------------------------------
   # A latent role keeps its name in the structural syntax; its column is
@@ -208,11 +255,52 @@ fitModel <- function(spec, data, bind, reliability = NULL,
   if (!lavaan::lavInspect(fit, "converged"))
     return(fail("Skipped: model did not converge"))
 
-  pe <- if (metric == "std") {
+  # Standardized estimates don't depend on the scaling; raw ones are
+  # converted back to the columns' own units. A latent role and its
+  # indicator share their column's scale.
+  # lavaan repeats its "could not compute standard errors" warning when the
+  # results are extracted; it is reported in $status (below), so collect it
+  # here rather than printing it once per item
+  quietSE <- function(expr) withCallingHandlers(expr, warning = function(w) {
+    if (grepl("could not compute standard errors", conditionMessage(w), ignore.case = TRUE)) {
+      warns <<- c(warns, conditionMessage(w))
+      invokeRestart("muffleWarning")
+    }
+  })
+  pe <- quietSE(if (metric == "std") {
     s <- lavaan::standardizedSolution(fit, type = "std.all")
     names(s)[names(s) == "est.std"] <- "est"
+    if (binary == "unit" && any(!is.na(binD))) {
+      # std.all puts every variable in SD units. For a binary variable B,
+      # re-express its regression coefficients per difference between its two
+      # values: multiply by D/SD(B) where B predicts, and by SD(B)/D where B
+      # is predicted (its implied SD, in the columns' own units). Covariances
+      # stay correlations, and defined parameters are untouched: in every
+      # pathway a variable's scale cancels.
+      imp <- lavaan::lavInspect(fit, "implied")$cov
+      bin <- names(binD)[!is.na(binD)]
+      g <- stats::setNames(sqrt(diag(imp)[bin]) * sc[bin] / binD[bin], bin)
+      gl <- g[s$lhs]; gr <- g[s$rhs]
+      gl[is.na(gl)] <- 1; gr[is.na(gr)] <- 1
+      # applied to the reported coefficients only (below): the pathways stay
+      # fully standardized, so a decomposition still adds to its total even
+      # when one of its parts is a coefficient between binary variables
+      s$binFactor <- ifelse(s$op == "~", unname(gl / gr), 1)
+    }
     s
-  } else lavaan::parameterestimates(fit)
+  } else {
+    p <- lavaan::parameterestimates(fit)
+    if (rescale) {
+      units <- sc
+      if (length(latent)) units[paste0(latent, "_obs")] <- sc[latent]
+      p <- tryCatch(unscaleEstimates(p, fit, units),
+                    error = function(e) structure(list(msg = conditionMessage(e)),
+                                                  class = "fancyFitFail"))
+      if (inherits(p, "fancyFitFail"))
+        return(fail(paste0("Model error: ", p$msg, " Use rescale = FALSE.")))
+    }
+    p
+  })
 
   grab <- function(lbl, col) {
     v <- pe[[col]][!is.na(pe$label) & pe$label == lbl]
@@ -250,7 +338,21 @@ fitModel <- function(spec, data, bind, reliability = NULL,
     paste0("Inadmissible: ", paste(problems, collapse = "; "),
            if (length(latent)) " (is the reliability lower than the data imply?)")
 
+  # Estimates can exist without standard errors (lavaan couldn't invert the
+  # information matrix); say so rather than reporting plain success.
+  has_est <- !is.na(path_rows$est)
+  se_failed <- any(grepl("could not compute standard errors", warns,
+                         ignore.case = TRUE)) ||
+    (any(has_est) && all(is.na(path_rows$se[has_est])))
+  if (se_failed)
+    status <- paste0(if (admissible) "Estimated" else status,
+                     "; standard errors could not be computed (information ",
+                     "matrix not invertible; check X and controls for ",
+                     "redundancy, no variance, or pairs never observed together)")
+
   ## ---- structural coefficients, relabelled to original names --------------
+  if (!is.null(pe$binFactor))
+    for (cl in c("est", "se", "ci.lower", "ci.upper")) pe[[cl]] <- pe[[cl]] * pe$binFactor
   lookup <- stats::setNames(varmap$original, varmap$internal)
   keep <- c("lhs", "rhs", "est", "se", "pvalue", "ci.lower", "ci.upper")
   is_struct <- pe$lhs %in% roles & pe$rhs %in% roles
@@ -280,6 +382,47 @@ fitModel <- function(spec, data, bind, reliability = NULL,
   )
   if (return_fit) out$fit <- fit
   out
+}
+
+# Convert raw-metric estimates from a fit to SD-scaled columns back to the
+# columns' own units. `units` gives each variable's scale factor (its SD).
+# Scaling without centering makes each parameter a fixed multiple of its
+# scaled value: a regression coefficient by SD(lhs)/SD(rhs), a covariance by
+# SD(lhs)*SD(rhs), an intercept by SD(lhs), a loading by SD(rhs)/SD(lhs).
+# A defined (:=) parameter's multiple is found by evaluating lavaan's
+# definition function at two parameter vectors, one in scaled and one in raw
+# units, and checked at a second pair: it must be the same, which holds for
+# any definition built from products and ratios of parameters in consistent
+# units (all of this package's specs). SEs and CIs scale with the estimate;
+# z and p are unchanged.
+unscaleEstimates <- function(pe, fit, units) {
+  mult <- function(op, lhs, rhs) {
+    ul <- units[lhs]; ur <- units[rhs]
+    ul[is.na(ul)] <- 1; ur[is.na(ur)] <- 1
+    unname(ifelse(op == "~", ul / ur, ifelse(op == "~~", ul * ur,
+           ifelse(op == "~1", ul, ifelse(op == "=~", ur / ul, NA_real_)))))
+  }
+  f <- mult(pe$op, pe$lhs, pe$rhs)
+
+  isdef <- pe$op == ":="
+  if (any(isdef)) {
+    pt <- lavaan::parTable(fit)
+    fr <- pt[pt$free > 0, ]
+    fr <- fr[order(fr$free), ]
+    u  <- mult(fr$op, fr$lhs, fr$rhs)
+    if (anyNA(u)) stop("cannot convert a parameter of this model back to raw units.")
+    deff <- fit@Model@def.function
+    k <- seq_len(nrow(fr))
+    ratio <- function(p) deff(p * u) / deff(p)
+    r1 <- ratio(.6 + (k %% 7) / 10)
+    r2 <- ratio(1.1 + (k %% 5) / 7)
+    if (any(!is.finite(r1)) || !isTRUE(all.equal(r1, r2, tolerance = 1e-8)))
+      stop("a defined parameter can't be converted back to raw units by rescaling.")
+    f[isdef] <- r1[match(pe$lhs[isdef], names(r1))]
+  }
+  for (cl in intersect(c("est", "se", "ci.lower", "ci.upper"), names(pe)))
+    pe[[cl]] <- pe[[cl]] * f
+  pe
 }
 
 # Validate a role-keyed reliability vector; return it named by role, with NA
