@@ -494,6 +494,25 @@ three longer-lag organizations, so the comparison mixes the linkage problem
 with the lag. Whether B and D should be kept depends on whether their ID
 links can be verified; until then, it is worth reporting results both ways.
 
+## Plotting results
+
+`plot()` on a cross-lagged fit draws the selection-versus-change scatterplot
+shown above. `type = "bars"` draws both stability decompositions instead,
+side by side, one bar per item divided into its pathways:
+
+```{r, fig.width = 8, fig.height = 3.5}
+plot(clP, type = "bars", pool = list(organization = orgs))
+```
+
+`stabilityPaths()` results have three plots: the same kind of bars
+(`plot(x)`), each item's path diagram (`plot(x, item = "name")`), and the
+scatterplot (`plot(x, type = "effects")`). `reliabilitySensitivity()`
+results plot the effects across the grid of reliabilities, as above. The
+"Plots" sections of `?crossLagPaths` and `?stabilityPaths` list the options.
+Apart from the path diagram, the plots are ggplot2 objects: add layers or
+themes with `+`, save them with `ggplot2::ggsave()`, and find the plotted
+numbers in their `$data`.
+
 ## Speeding up many fits
 
 Each item's model is fitted separately, and a model with several controls

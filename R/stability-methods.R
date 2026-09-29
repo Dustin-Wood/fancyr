@@ -27,8 +27,25 @@ decompCells <- function(p, digits) {
 # round first, so a tiny negative prints as 0.00 rather than -0.00
 fmtNum <- function(v, dg) formatC(round(v, dg) + 0, digits = dg, format = "f")
 
-# Admissibility flag appended to item names in printed tables.
-admFlag <- function(adm) ifelse(is.na(adm), " ?", ifelse(adm, "", " !"))
+# Flag appended to item names in printed tables: ? not estimated,
+# ! inadmissible, * estimated but no standard errors.
+admFlag <- function(adm, status = NULL) {
+  f <- ifelse(is.na(adm), " ?", ifelse(adm, "", " !"))
+  if (!is.null(status))
+    f[f == "" & grepl("standard errors could not", status)] <- " *"
+  f
+}
+
+# Notes explaining whichever flags appear.
+flagNotes <- function(flag) {
+  if (any(flag == " !"))
+    cat("\n  ! inadmissible solution (e.g. adjusted stability > 1); see $status.",
+        "\n    The reliability supplied is probably too low for that item.\n")
+  if (any(flag == " *"))
+    cat("\n  * estimated, but standard errors could not be computed; see $status.\n")
+  if (any(flag == " ?"))
+    cat("\n  ? model not estimated; see $status.\n")
+}
 
 pathLabel <- function(path) sub("^via_", "via ", path)
 
@@ -98,7 +115,21 @@ settingsLine <- function(x) {
     sprintf("  controls:      %s", if (length(s$controls)) paste(s$controls, collapse = ", ") else "none"),
     sprintf("  latent:        %s", relText(s)),
     sprintf("  metric:        %s   missing: %s",
-            if (s$metric == "std") "standardized" else "raw", s$missing))
+            if (s$metric == "std") "standardized" else "raw", s$missing),
+    if (!is.null(b <- binaryText(x))) sprintf("  binary:        %s", b))
+}
+
+# Header line naming the binary variables whose standardized coefficients
+# are per 1 vs 0 (NULL when there are none, or they are standardized too).
+binaryText <- function(x) {
+  s <- x$settings
+  if (!identical(s$metric, "std") || identical(s$binary, "sd")) return(NULL)
+  vm <- NULL
+  for (f in x$fits) if (!is.null(f$varmap$binary)) { vm <- f$varmap; break }
+  if (is.null(vm)) return(NULL)
+  b <- vm$original[vm$binary]
+  if (!length(b)) return(NULL)
+  paste(paste(b, collapse = ", "), "(coefficients per 1 vs 0; outcome in SDs)")
 }
 
 # Which variables were modelled as latent, and at what reliability.
@@ -151,7 +182,7 @@ print.fancyStability <- function(x, digits = 2, pool = NULL, ...) {
   rownames(tab) <- NULL
 
   s <- x$summary
-  flag <- admFlag(s$admissible)
+  flag <- admFlag(s$admissible, s$status)
   out <- data.frame(item = paste0(s$item, flag), n = s$n, tab,
                     check.names = FALSE, stringsAsFactors = FALSE)
 
@@ -160,11 +191,7 @@ print.fancyStability <- function(x, digits = 2, pool = NULL, ...) {
   cat(settingsLine(x), sep = "\n")
   cat("\n  estimate (share of total stability)\n")
   print(out, row.names = FALSE, right = FALSE)
-  if (any(flag == " !"))
-    cat("\n  ! inadmissible solution (e.g. adjusted stability > 1); see $status.",
-        "\n    The reliability supplied is probably too low for that item.\n")
-  if (any(flag == " ?"))
-    cat("\n  ? model not estimated; see $status.\n")
+  flagNotes(flag)
   invisible(x)
 }
 
@@ -535,9 +562,9 @@ effectsScatter <- function(out, labels, xlim, ylim, title, xlab, ylab,
       if (!length(w)) return(NULL)
       at <- c(-w, w)
       if (which == "selection")
-        ggplot2::geom_vline(xintercept = at, colour = "grey55", linewidth = .25)
+        ggplot2::geom_vline(xintercept = at, colour = "grey55", linewidth = .25, linetype = 2)
       else
-        ggplot2::geom_hline(yintercept = at, colour = "grey55", linewidth = .25)
+        ggplot2::geom_hline(yintercept = at, colour = "grey55", linewidth = .25, linetype = 2)
     }
     g <- g + edge("selection") + edge("change")
   }

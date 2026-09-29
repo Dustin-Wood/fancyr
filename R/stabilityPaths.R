@@ -144,6 +144,28 @@
 #' of items. \emph{Journal of Personality and Social Psychology, 125}(2),
 #' 437--454. \doi{10.1037/pspp0000441}
 #'
+#' @section Plots:
+#' \code{plot()} on the result draws one of three graphics (details and all
+#' options in \code{\link{plot.fancyStability}}):
+#' \describe{
+#'   \item{\code{plot(x)}}{Bars, one per item, divided into its pathways,
+#'     with a tick at the total. \code{what = "share"} plots shares,
+#'     \code{sort = TRUE} orders items by total stability, and \code{pool}
+#'     draws a set of controls as one segment.}
+#'   \item{\code{plot(x, item = "name")}}{One item's path diagram. The name
+#'     must match exactly; \code{grep("word", x$settings$items, value = TRUE)}
+#'     finds it. \code{show_controls = FALSE} hides the controls.}
+#'   \item{\code{plot(x, type = "effects")}}{A scatterplot of every item's
+#'     selection effect (\code{X ~ Y1}) against its change effect
+#'     (\code{Y2 ~ X}), with shaded bands where estimates can't be
+#'     significant. \code{labels} shortens item names, e.g.
+#'     \code{labels = function(i) substr(i, 1, 25)}.}
+#' }
+#' The bars and scatterplot are \pkg{ggplot2} objects: add layers with
+#' \code{+}, save with \code{ggplot2::ggsave()}, and find the plotted numbers
+#' in \code{$data}. \code{\link{reliabilitySensitivity}} results have their
+#' own \code{plot()}.
+#'
 #' @inheritSection stabilityData Missing data
 #'
 #' @param data A data frame with one row per person, typically from
@@ -170,6 +192,15 @@
 #' @param cores Number of CPU cores to spread the items over (default 1), or
 #'   a cluster from \code{\link[parallel]{makeCluster}}; see
 #'   \code{\link{modelOnAllY}}. Worth it for many items.
+#' @param binary For binary \code{X} or \code{controls} (exactly two distinct
+#'   values, e.g. 0/1): \code{"sd"} (default) standardizes them like other
+#'   variables, so every coefficient is on one comparable metric.
+#'   \code{"unit"} reports their standardized coefficients per 1 vs 0 instead
+#'   -- e.g. the change effect \code{Y2 ~ X} as the difference in \code{Y2},
+#'   in SDs, between those who had the experience and those who didn't, and
+#'   the selection effect \code{X ~ Y1} as the change in the proportion who
+#'   had it per SD of \code{Y1}. The pathways and their shares are the same
+#'   either way; see \code{\link{fitModel}}.
 #'
 #' @return An object of class \code{fancyStability}: a list with
 #' \item{paths}{Long data frame, one row per item per pathway: \code{item},
@@ -227,7 +258,8 @@ stabilityPaths <- function(data, items = attr(data, "commonItems"), X = NULL,
                            controls = NULL, reliability = NULL,
                            metric = c("std", "raw"),
                            suffixes = c("[T1]", "[T2]"), missing = "fiml",
-                           cores = 1) {
+                           cores = 1, binary = c("sd", "unit")) {
+  binary <- match.arg(binary)
 
   if (!is.data.frame(data)) stop("`data` must be a data frame.")
   metric <- match.arg(metric)
@@ -270,7 +302,8 @@ stabilityPaths <- function(data, items = attr(data, "commonItems"), X = NULL,
                      reliability      = rel$by_item,
                      metric           = metric,
                      return_estimates = TRUE,
-                     cores            = cores)
+                     cores            = cores,
+                     binary           = binary)
 
   ## ---- per-item descriptives for the summary ------------------------------
   desc <- do.call(rbind, lapply(seq_along(items), function(i) {
@@ -306,7 +339,8 @@ stabilityPaths <- function(data, items = attr(data, "commonItems"), X = NULL,
       settings     = list(items = items, X = X, controls = controls,
                           reliability = rel, metric = metric,
                           suffixes = suffixes, missing = missing,
-                          cores = if (is.numeric(cores)) cores else 1L),
+                          cores = if (is.numeric(cores)) cores else 1L,
+                          binary = binary),
       data         = data[, keep_cols, drop = FALSE]
     ),
     class = "fancyStability"

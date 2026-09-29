@@ -52,6 +52,11 @@
 #'   \code{\link{fitModel}}.
 #' @param return_estimates Logical. If \code{TRUE} (default), include the full
 #'   per-item \code{\link{fitModel}} results in \code{$modelEstimates}.
+#' @param binary Passed to \code{\link{fitModel}}: in the standardized metric,
+#'   express binary variables' coefficients per SD like the rest
+#'   (\code{"sd"}, default) or per 1 vs 0 (\code{"unit"}).
+#' @param rescale Passed to \code{\link{fitModel}}: fit to SD-scaled columns
+#'   and convert estimates back (default \code{TRUE}).
 #' @param cores Number of CPU cores to spread the items over (default 1, no
 #'   parallel processing), or a cluster from \code{\link[parallel]{makeCluster}}
 #'   to reuse. Each core is a separate background R session that takes a few
@@ -108,7 +113,9 @@
 modelOnAllY <- function(spec, data, items,
                         suffixes = c(Y1 = "[T1]", Y2 = "[T2]"),
                         reliability = NULL, metric = c("raw", "std"),
-                        return_estimates = TRUE, cores = 1) {
+                        return_estimates = TRUE, cores = 1, rescale = TRUE,
+                        binary = c("sd", "unit")) {
+  binary <- match.arg(binary)
 
   if (!inherits(spec, "fancyModel"))
     stop("`spec` must be a fancyModel object (see ?fancyModel).")
@@ -155,9 +162,9 @@ modelOnAllY <- function(spec, data, items,
                     names(data))
   env <- list2env(list(spec = spec, data = data[, cols, drop = FALSE],
                        suffixes = suffixes, reliability = reliability,
-                       metric = metric),
+                       metric = metric, rescale = rescale, binary = binary),
                   parent = baseenv())
-  for (f in c("fitModel", "checkReliability")) {
+  for (f in c("fitModel", "checkReliability", "unscaleEstimates")) {
     fn <- get(f); environment(fn) <- env; assign(f, fn, envir = env)
   }
   environment(rel_for) <- env
@@ -174,7 +181,7 @@ modelOnAllY <- function(spec, data, items,
 
     res <- tryCatch(
       fitModel(spec, data, bind = bind, reliability = rel_for(item),
-               metric = metric),
+               metric = metric, rescale = rescale, binary = binary),
       error = function(e) {
         message("Model failed for item '", item, "': ", conditionMessage(e))
         list(status = paste("Model error:", conditionMessage(e)))

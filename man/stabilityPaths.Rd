@@ -13,7 +13,8 @@ stabilityPaths(
   metric = c("std", "raw"),
   suffixes = c("[T1]", "[T2]"),
   missing = "fiml",
-  cores = 1
+  cores = 1,
+  binary = c("sd", "unit")
 )
 }
 \arguments{
@@ -49,6 +50,16 @@ Defaults to \code{"fiml"}; \code{"listwise"} drops incomplete cases.}
 \item{cores}{Number of CPU cores to spread the items over (default 1), or
 a cluster from \code{\link[parallel]{makeCluster}}; see
 \code{\link{modelOnAllY}}. Worth it for many items.}
+
+\item{binary}{For binary \code{X} or \code{controls} (exactly two distinct
+values, e.g. 0/1): \code{"sd"} (default) standardizes them like other
+variables, so every coefficient is on one comparable metric.
+\code{"unit"} reports their standardized coefficients per 1 vs 0 instead
+-- e.g. the change effect \code{Y2 ~ X} as the difference in \code{Y2},
+in SDs, between those who had the experience and those who didn't, and
+the selection effect \code{X ~ Y1} as the change in the proportion who
+had it per SD of \code{Y1}. The pathways and their shares are the same
+either way; see \code{\link{fitModel}}.}
 }
 \value{
 An object of class \code{fancyStability}: a list with
@@ -204,6 +215,30 @@ for similar items or measures can give a starting range. Whatever the
 source, check the conclusions across the plausible range with
 \code{\link{reliabilitySensitivity}}. The observed \code{Y1}-\code{Y2}
 retest correlation is a floor: a reliability below it is inadmissible.
+}
+
+\section{Plots}{
+
+\code{plot()} on the result draws one of three graphics (details and all
+options in \code{\link{plot.fancyStability}}):
+\describe{
+  \item{\code{plot(x)}}{Bars, one per item, divided into its pathways,
+    with a tick at the total. \code{what = "share"} plots shares,
+    \code{sort = TRUE} orders items by total stability, and \code{pool}
+    draws a set of controls as one segment.}
+  \item{\code{plot(x, item = "name")}}{One item's path diagram. The name
+    must match exactly; \code{grep("word", x$settings$items, value = TRUE)}
+    finds it. \code{show_controls = FALSE} hides the controls.}
+  \item{\code{plot(x, type = "effects")}}{A scatterplot of every item's
+    selection effect (\code{X ~ Y1}) against its change effect
+    (\code{Y2 ~ X}), with shaded bands where estimates can't be
+    significant. \code{labels} shortens item names, e.g.
+    \code{labels = function(i) substr(i, 1, 25)}.}
+}
+The bars and scatterplot are \pkg{ggplot2} objects: add layers with
+\code{+}, save with \code{ggplot2::ggsave()}, and find the plotted numbers
+in \code{$data}. \code{\link{reliabilitySensitivity}} results have their
+own \code{plot()}.
 }
 
 \section{Missing data}{

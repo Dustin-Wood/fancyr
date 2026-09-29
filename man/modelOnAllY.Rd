@@ -12,7 +12,9 @@ modelOnAllY(
   reliability = NULL,
   metric = c("raw", "std"),
   return_estimates = TRUE,
-  cores = 1
+  cores = 1,
+  rescale = TRUE,
+  binary = c("sd", "unit")
 )
 }
 \arguments{
@@ -49,6 +51,13 @@ stays on your computer); if the sessions can't be started, the items are
 fitted on one core with a warning. See "Parallel processing" in
 \code{\link{lassoLoops}}. Messages about individual items' problems are
 not shown from parallel sessions; \code{$status} still records them.}
+
+\item{rescale}{Passed to \code{\link{fitModel}}: fit to SD-scaled columns
+and convert estimates back (default \code{TRUE}).}
+
+\item{binary}{Passed to \code{\link{fitModel}}: in the standardized metric,
+express binary variables' coefficients per SD like the rest
+(\code{"sd"}, default) or per 1 vs 0 (\code{"unit"}).}
 }
 \value{
 A named list with components:

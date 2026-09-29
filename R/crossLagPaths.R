@@ -60,6 +60,24 @@
 #' \code{\link{reliabilitySensitivity}} to see how much the results depend on
 #' the value chosen.
 #'
+#' @section Plots:
+#' \code{plot()} on the result draws one of two graphics (details and all
+#' options in \code{\link{crossLagPaths-methods}}):
+#' \describe{
+#'   \item{\code{plot(x)}}{The default: a scatterplot of every item's
+#'     selection effect (\code{X2 ~ Y1}) against its change effect
+#'     (\code{Y2 ~ X1}), with shaded bands where estimates can't be
+#'     significant. \code{labels} shortens item names; \code{bands},
+#'     \code{same_range}, \code{xlim}, \code{ylim} and \code{title} adjust
+#'     it.}
+#'   \item{\code{plot(x, type = "bars")}}{Both stability decompositions (the
+#'     item's and \code{X}'s) as bars, side by side; \code{what},
+#'     \code{sort} and \code{pool} as for \code{\link{plot.fancyStability}}.}
+#' }
+#' Both are \pkg{ggplot2} objects: add layers with \code{+}, save with
+#' \code{ggplot2::ggsave()}, and find the plotted numbers in \code{$data}.
+#' \code{\link{reliabilitySensitivity}} results have their own \code{plot()}.
+#'
 #' @inheritSection stabilityData Missing data
 #'
 #' @param data A data frame with one row per person, typically from
@@ -83,6 +101,11 @@
 #' @param cores Number of CPU cores to spread the items over (default 1), or
 #'   a cluster from \code{\link[parallel]{makeCluster}}; see
 #'   \code{\link{modelOnAllY}}. Worth it for many items.
+#' @param binary For a binary \code{X} or controls (exactly two distinct
+#'   values, e.g. 0/1): \code{"sd"} (default) standardizes them like other
+#'   variables; \code{"unit"} reports their standardized coefficients per 1
+#'   vs 0; see \code{\link{stabilityPaths}}. The decompositions are the same
+#'   either way.
 #'
 #' @return An object of class \code{fancyCrossLag}: a list with
 #' \item{effects}{Long data frame, one row per item per effect: \code{item},
@@ -140,7 +163,8 @@ crossLagPaths <- function(data, items = attr(data, "commonItems"), X,
                           controls = NULL, reliability = NULL,
                           metric = c("std", "raw"),
                           suffixes = c("[T1]", "[T2]"), missing = "fiml",
-                          cores = 1) {
+                          cores = 1, binary = c("sd", "unit")) {
+  binary <- match.arg(binary)
 
   if (!is.data.frame(data)) stop("`data` must be a data frame.")
   metric <- match.arg(metric)
@@ -190,7 +214,8 @@ crossLagPaths <- function(data, items = attr(data, "commonItems"), X,
                      reliability      = rel$by_item,
                      metric           = metric,
                      return_estimates = TRUE,
-                     cores            = cores)
+                     cores            = cores,
+                     binary           = binary)
 
   ## ---- descriptives --------------------------------------------------------
   retest <- function(a, b) {
@@ -226,7 +251,8 @@ crossLagPaths <- function(data, items = attr(data, "commonItems"), X,
 
   settings <- list(items = items, X = X, Xcols = Xcols, controls = controls,
                    reliability = rel, metric = metric, suffixes = suffixes,
-                   missing = missing, cores = if (is.numeric(cores)) cores else 1L)
+                   missing = missing, cores = if (is.numeric(cores)) cores else 1L,
+                   binary = binary)
   keep_cols <- intersect(c(attr(data, "id"), cols_T1, cols_T2, Xcols, controls),
                          names(data))
 
