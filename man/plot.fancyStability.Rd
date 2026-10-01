@@ -61,8 +61,11 @@ names.}
 Latent variables are drawn as ellipses labelled with their reliability.
 For the effects scatterplot: \code{xlim} and \code{ylim} (axis ranges),
 \code{title}, \code{bands} (\code{TRUE}, \code{FALSE}, or a list of fits
-to compute the significance bands from) and \code{same_range}; see the
-sections above. The bar chart ignores \code{...}.}
+to compute the significance bands from), \code{same_range}, and
+\code{label_size} (text size of the point labels, in mm; default 3); see
+the sections above. The bar chart ignores \code{...}. To save any of
+these plots at a suitable size and resolution, see
+\code{\link{fancySave}}.}
 }
 \value{
 The bar chart and effects scatterplot return \pkg{ggplot2} objects,
@@ -101,16 +104,20 @@ with equal scaling (\code{same_range = TRUE}). To compare two analyses
 
 An estimate is significant at .05 when it is more than 1.96 standard errors
 from zero, so each item has its own critical value, \eqn{1.96 \times SE}.
-The shaded bands summarize these across items, separately for each axis:
+The shaded bands summarize these across items, separately for each axis.
+Each band is the same translucent grey, so shading deepens where bands
+overlap:
 \itemize{
-  \item the \strong{darker band} runs to the smallest critical value: an
-    estimate inside it would not be significant for any item;
-  \item the \strong{lighter band} runs to the largest: an estimate inside it
-    would be significant for some items but not others;
+  \item one band runs to the smallest critical value: an estimate inside
+    it would not be significant for any item;
+  \item a second runs to the largest: an estimate covered by this band
+    alone would be significant for some items but not others;
   \item beyond both, an estimate would be significant for every item.
 }
-Thin grey lines mark the band edges, and solid black lines mark zero on
-each axis.
+Where a selection band crosses a change band the shading deepens further,
+so each axis's band edges stay visible. The "Shading" legend shows the one-
+and two-band shades. Light gridlines fall every .05, and solid black lines
+mark zero on each axis.
 The bands differ between the axes when one kind of effect is estimated more
 precisely than the other, e.g. because more people contribute to it.
 }

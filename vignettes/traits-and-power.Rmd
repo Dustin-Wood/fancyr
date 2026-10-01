@@ -397,11 +397,13 @@ white for neither.
 
 The shading shows where significance is possible. An estimate is significant
 when it is more than 1.96 standard errors from zero, so every adjective has
-its own critical value. Inside the darker band, an estimate would not be
-significant for *any* adjective. In the lighter band, it would be for some
-adjectives but not others. Beyond both, it would be significant for all of
-them. Thin gray lines mark the band edges, so a point near zero on one axis
-can still be read against the critical values of the other.
+its own critical value. Each axis has two overlapping bands of the same
+translucent gray. Where both cover an estimate (the darker shade), it would
+not be significant for *any* adjective. Where only one does (the lighter
+shade), it would be for some adjectives but not others. Beyond both, it would
+be significant for all of them. Where the selection and change bands cross,
+the shading deepens further, so a point near zero on one axis can still be
+read against the critical values of the other.
 
 The bands are narrower for selection than for change. Selection effects are
 estimated more precisely because more people contribute to them: Time 2

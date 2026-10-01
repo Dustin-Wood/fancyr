@@ -19,8 +19,19 @@
   every coefficient fully standardized, so effect sizes stay comparable
   across variables. Pathways, totals and shares are the same either way, and
   with `"unit"`, `print()` lists the variables treated as binary.
-* Selection-versus-change scatterplot: significance-band edges are now
-  dashed.
+* Selection-versus-change scatterplot: the significance bands are now
+  layers of one translucent gray, so shading deepens where bands overlap
+  and the edge lines are gone; a legend explains the two shades (replacing
+  the caption). Light gridlines fall every .05 (labelled every .05 or a
+  wider step, so the axis isn't crowded). New `label_size` sets the
+  point-label text size.
+* All plots (bar chart, effects scatterplot, path diagram, and
+  `reliabilitySensitivity()` plots) now print numbers without the leading
+  zero (.10, -.05, p = .023, rel = .70). The bar chart gets the same .05
+  gridlines as the scatterplot.
+* New `fancySave()` saves any of these plots at a size suited to the plot
+  (e.g. a square panel for the scatterplot, a row per item for the bar
+  chart) and 300 dpi, using ragg for crisper PNGs when installed.
 * When standard errors can't be computed, the item's status now says so
   instead of "Success", and `print()` marks the item with `*`. lavaan's
   warning is no longer repeated once per item.

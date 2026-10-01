@@ -212,7 +212,8 @@ plot.fancyStabilitySensitivity <- function(x, what = c("effects", "est", "share"
         ggplot2::scale_shape_manual(values = c("p < .05" = 19, "p \u2265 .05" = 21),
                                     name = NULL, drop = FALSE) +
         ggplot2::scale_colour_brewer(palette = "Dark2", name = NULL) +
-        ggplot2::scale_x_continuous(breaks = rels) +
+        ggplot2::scale_x_continuous(breaks = rels, labels = noLeadingZero) +
+        ggplot2::scale_y_continuous(labels = noLeadingZero) +
         ggplot2::facet_wrap(~ panel, scales = "free_y", nrow = 1) +
         ggplot2::labs(x = "modeled reliability", y = ylab_est) +
         fancyTheme() +
@@ -239,7 +240,8 @@ plot.fancyStabilitySensitivity <- function(x, what = c("effects", "est", "share"
     ggplot2::geom_line(na.rm = TRUE) +
     ggplot2::geom_point(size = 2, na.rm = TRUE) +
     ggplot2::scale_colour_brewer(palette = "Dark2", name = NULL) +
-    ggplot2::scale_x_continuous(breaks = rels) +
+    ggplot2::scale_x_continuous(breaks = rels, labels = noLeadingZero) +
+    ggplot2::scale_y_continuous(labels = noLeadingZero) +
     ggplot2::facet_wrap(~ path, scales = "free_y", nrow = 1) +
     ggplot2::labs(x = "modeled reliability",
                   y = if (what == "share") "share of total" else ylab_est) +

@@ -30,7 +30,8 @@ crossLagColumns <- function(s) {
 #'   are shown combined, e.g. \code{list(organization = c("orgB", "orgC"))};
 #'   see \code{\link{stabilityPaths-methods}}. Display only.
 #' @param ... Further arguments; for \code{plot()}, \code{xlim}, \code{ylim}
-#'   and \code{title} for the effects scatterplot.
+#'   \code{title}, and \code{label_size} (text size of the point labels, in
+#'   mm; default 3) for the effects scatterplot.
 #' @rdname crossLagPaths-methods
 #' @name crossLagPaths-methods
 #' @title Print, Summarize, and Plot a Cross-Lagged Analysis
@@ -170,6 +171,7 @@ plot.fancyCrossLag <- function(x, type = c("effects", "bars"), labels = NULL,
   a <- list(...)
   effectsScatter(selChgTable(x), labels = labels, xlim = a$xlim, ylim = a$ylim,
                  title = a$title, bands = bands, same_range = same_range,
+                 label_size = if (is.null(a$label_size)) 3 else a$label_size,
                  xlab = sprintf("Selection effects (%s ~ Y1)", s$Xcols[2]),
                  ylab = sprintf("Change effects (Y2 ~ %s)", s$Xcols[1]))
 }

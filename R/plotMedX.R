@@ -95,9 +95,11 @@ plotMedX <- function(sp, item_label = NULL, x_label = NULL,
   fmt <- function(path_info) {
     est <- path_info$est
     if (is.na(est)) return("")
-    lbl <- sprintf(paste0("%.", digits, "f"), est)
-    if (show_pvalues && !is.na(path_info$pvalue))
-      lbl <- paste0(lbl, "\n(p=", sprintf("%.3f", path_info$pvalue), ")")
+    lbl <- noLeadingZero(est, digits)
+    p <- path_info$pvalue
+    if (show_pvalues && !is.na(p))
+      lbl <- paste0(lbl, "\n(p ", if (p < .001) "< .001" else
+                    paste("=", noLeadingZero(p, 3)), ")")
     lbl
   }
 
@@ -304,7 +306,7 @@ plotMedX <- function(sp, item_label = NULL, x_label = NULL,
          cex    = label_cex)
     if (!is.na(rel))
       text(x = lyt[ri, 1], y = lyt[ri, 2] - 0.045,
-           labels = sprintf("rel = %.2f", rel),
+           labels = paste("rel =", noLeadingZero(rel, 2)),
            adj = c(0.5, 0.5), cex = label_cex * 0.7, col = "grey30")
   }
 

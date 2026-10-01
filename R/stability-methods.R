@@ -275,16 +275,20 @@ print.summary.fancyStability <- function(x, digits = 3, ...) {
 #' @section Significance bands:
 #' An estimate is significant at .05 when it is more than 1.96 standard errors
 #' from zero, so each item has its own critical value, \eqn{1.96 \times SE}.
-#' The shaded bands summarize these across items, separately for each axis:
+#' The shaded bands summarize these across items, separately for each axis.
+#' Each band is the same translucent grey, so shading deepens where bands
+#' overlap:
 #' \itemize{
-#'   \item the \strong{darker band} runs to the smallest critical value: an
-#'     estimate inside it would not be significant for any item;
-#'   \item the \strong{lighter band} runs to the largest: an estimate inside it
-#'     would be significant for some items but not others;
+#'   \item one band runs to the smallest critical value: an estimate inside
+#'     it would not be significant for any item;
+#'   \item a second runs to the largest: an estimate covered by this band
+#'     alone would be significant for some items but not others;
 #'   \item beyond both, an estimate would be significant for every item.
 #' }
-#' Thin grey lines mark the band edges, and solid black lines mark zero on
-#' each axis.
+#' Where a selection band crosses a change band the shading deepens further,
+#' so each axis's band edges stay visible. The "Shading" legend shows the one-
+#' and two-band shades. Light gridlines fall every .05, and solid black lines
+#' mark zero on each axis.
 #' The bands differ between the axes when one kind of effect is estimated more
 #' precisely than the other, e.g. because more people contribute to it.
 #'
@@ -329,8 +333,11 @@ print.summary.fancyStability <- function(x, digits = 3, ...) {
 #'   Latent variables are drawn as ellipses labelled with their reliability.
 #'   For the effects scatterplot: \code{xlim} and \code{ylim} (axis ranges),
 #'   \code{title}, \code{bands} (\code{TRUE}, \code{FALSE}, or a list of fits
-#'   to compute the significance bands from) and \code{same_range}; see the
-#'   sections above. The bar chart ignores \code{...}.
+#'   to compute the significance bands from), \code{same_range}, and
+#'   \code{label_size} (text size of the point labels, in mm; default 3); see
+#'   the sections above. The bar chart ignores \code{...}. To save any of
+#'   these plots at a suitable size and resolution, see
+#'   \code{\link{fancySave}}.
 #'
 #' @return The bar chart and effects scatterplot return \pkg{ggplot2} objects,
 #'   which print as the plot and can be modified with \code{+} (e.g. a theme
@@ -427,12 +434,16 @@ decompBars <- function(p, adm, what, sort, metric) {
     ggplot2::scale_fill_manual(values = pal, name = NULL) +
     ggplot2::scale_shape_manual(values = c(total = "|"), name = NULL) +
     ggplot2::scale_y_discrete(labels = lbl) +
+    ggplot2::scale_x_continuous(breaks = gridBreaks, minor_breaks = gridLines,
+                                labels = noLeadingZero) +
     ggplot2::labs(x = if (what == "share") "share of total stability"
                       else sprintf("stability (%s)",
                                    if (metric == "std") "standardized" else "raw"),
                   y = NULL) +
     fancyTheme() +
     ggplot2::theme(legend.position = "bottom",
+                   panel.grid.major.x = ggplot2::element_line(colour = "grey85", linewidth = .3),
+                   panel.grid.minor.x = ggplot2::element_line(colour = "grey90", linewidth = .25),
                    panel.grid.major.y = ggplot2::element_blank())
   if (facet) g <- g + ggplot2::facet_wrap(~ outcome, nrow = 1)
   g
@@ -493,10 +504,12 @@ sigBands <- function(tabs) {
 # Selection (X ~ Y1) vs change (Y2 ~ X) scatterplot, one labelled point per
 # item. Behind plot(x, type = "effects").
 plotEffects <- function(x, X = NULL, labels = NULL, xlim = NULL, ylim = NULL,
-                        title = NULL, bands = TRUE, same_range = TRUE, ...) {
+                        title = NULL, bands = TRUE, same_range = TRUE,
+                        label_size = 3, ...) {
   X <- if (is.null(X)) x$settings$X[1] else X
   effectsScatter(selChgTable(x, X), labels = labels, xlim = xlim, ylim = ylim,
                  title = title, bands = bands, same_range = same_range,
+                 label_size = label_size,
                  xlab = paste0("Selection effects (", X, " ~ Y1)"),
                  ylab = paste0("Change effects (Y2 ~ ", X, ")"))
 }
@@ -506,7 +519,7 @@ plotEffects <- function(x, X = NULL, labels = NULL, xlim = NULL, ylim = NULL,
 # `bands`: TRUE (from the items plotted), FALSE, or a list of fits whose items
 # all contribute, so several plots can share the same bands.
 effectsScatter <- function(out, labels, xlim, ylim, title, xlab, ylab,
-                           bands = TRUE, same_range = TRUE) {
+                           bands = TRUE, same_range = TRUE, label_size = 3) {
   items <- out$item
   adm <- out$admissible
   lab <- if (is.null(labels)) items
@@ -544,54 +557,98 @@ effectsScatter <- function(out, labels, xlim, ylim, title, xlab, ylab,
 
   g <- ggplot2::ggplot(d, ggplot2::aes(x = .data$selection, y = .data$change))
   if (!is.null(bd)) {
-    band <- function(which, level, fill) {
-      w <- bd[[which]][[level]]
-      if (is.na(w)) return(NULL)
-      if (which == "selection")
-        ggplot2::annotate("rect", xmin = -w, xmax = w, ymin = -Inf, ymax = Inf, fill = fill)
-      else
-        ggplot2::annotate("rect", ymin = -w, ymax = w, xmin = -Inf, xmax = Inf, fill = fill)
+    # Every band is the same translucent grey, so the shading deepens where
+    # bands stack: one layer where an estimate would be significant for some
+    # items, two where it would be for none, and more where the two axes'
+    # bands cross. The change in shade marks each band edge. The legend keys
+    # show one layer and two.
+    band_lv <- c("no items", "some items")
+    rects <- do.call(rbind, lapply(c("selection", "change"), function(which)
+      do.call(rbind, lapply(c("outer", "inner"), function(level) {
+        w <- bd[[which]][[level]]
+        if (is.na(w)) return(NULL)
+        sel <- which == "selection"
+        data.frame(xmin = if (sel) -w else -Inf, xmax = if (sel) w else Inf,
+                   ymin = if (sel) -Inf else -w, ymax = if (sel) Inf else w,
+                   key = band_lv[if (level == "inner") 1 else 2])
+      }))))
+    if (!is.null(rects)) {
+      rects$key <- factor(rects$key, levels = band_lv)
+      g <- g +
+        ggplot2::geom_rect(data = rects, inherit.aes = FALSE, fill = "grey30",
+                           ggplot2::aes(xmin = .data$xmin, xmax = .data$xmax,
+                                        ymin = .data$ymin, ymax = .data$ymax,
+                                        alpha = .data$key)) +
+        ggplot2::scale_alpha_manual(
+          values = c(.12, .12), limits = band_lv, drop = FALSE,
+          name = "Shading, p < .05 for:",
+          guide = ggplot2::guide_legend(
+            order = 2, override.aes = list(alpha = c(1 - .88^2, .12))))
     }
-    light <- "grey92"; medium <- "grey80"
-    g <- g + band("selection", "outer", light) + band("change", "outer", light) +
-      band("selection", "inner", medium) + band("change", "inner", medium)
-    # thin edges at each critical value, drawn over both fills so every edge
-    # shows, including where a band crosses the other axis's band
-    edge <- function(which) {
-      w <- stats::na.omit(unname(unlist(bd[[which]])))
-      if (!length(w)) return(NULL)
-      at <- c(-w, w)
-      if (which == "selection")
-        ggplot2::geom_vline(xintercept = at, colour = "grey55", linewidth = .25, linetype = 2)
-      else
-        ggplot2::geom_hline(yintercept = at, colour = "grey55", linewidth = .25, linetype = 2)
-    }
-    g <- g + edge("selection") + edge("change")
   }
   g <- g +
     ggplot2::geom_hline(yintercept = 0, colour = "black", linewidth = .5) +
     ggplot2::geom_vline(xintercept = 0, colour = "black", linewidth = .5) +
     ggplot2::geom_point(ggplot2::aes(fill = .data$sig, colour = .data$sig),
-                        shape = 21, size = 2.6, stroke = .8, show.legend = TRUE) +
+                        shape = 21, size = 2.6, stroke = .8,
+                        show.legend = c(fill = TRUE, colour = TRUE, alpha = FALSE)) +
     ggplot2::scale_fill_manual(values = fills, limits = sig_lv, drop = FALSE,
-                               name = "p < .05:") +
+                               name = "p < .05:",
+                               guide = ggplot2::guide_legend(order = 1)) +
     ggplot2::scale_colour_manual(values = lines, limits = sig_lv, drop = FALSE,
-                                 name = "p < .05:")
+                                 name = "p < .05:",
+                                 guide = ggplot2::guide_legend(order = 1))
   g <- g + if (requireNamespace("ggrepel", quietly = TRUE)) {
-    ggrepel::geom_text_repel(ggplot2::aes(label = .data$label), size = 3,
+    ggrepel::geom_text_repel(ggplot2::aes(label = .data$label), size = label_size,
                              max.overlaps = Inf, seed = 1, min.segment.length = .3,
                              segment.colour = "grey70", segment.size = .3,
                              box.padding = .25, point.padding = .15)
   } else {
-    ggplot2::geom_text(ggplot2::aes(label = .data$label), size = 3, vjust = -.8)
+    ggplot2::geom_text(ggplot2::aes(label = .data$label), size = label_size, vjust = -.8)
   }
-  caption <- if (!is.null(bd))
-    "Shading: dark, not significant for any item; light, significant for some items (depends on the item's SE)."
   coord <- if (same_range) ggplot2::coord_fixed(xlim = xlim, ylim = ylim, expand = FALSE)
            else ggplot2::coord_cartesian(xlim = xlim, ylim = ylim)
   g + coord +
-    ggplot2::labs(x = xlab, y = ylab, title = title, caption = caption) +
+    ggplot2::scale_x_continuous(breaks = gridBreaks, minor_breaks = gridLines,
+                                labels = noLeadingZero) +
+    ggplot2::scale_y_continuous(breaks = gridBreaks, minor_breaks = gridLines,
+                                labels = noLeadingZero) +
+    ggplot2::labs(x = xlab, y = ylab, title = title) +
     fancyTheme() +
-    ggplot2::theme(legend.position = "bottom", panel.grid = ggplot2::element_blank(),
-                   plot.caption = ggplot2::element_text(colour = "grey35", hjust = 0))
+    ggplot2::theme(legend.position = "bottom",
+                   panel.grid.major = ggplot2::element_line(colour = "grey85", linewidth = .3),
+                   panel.grid.minor = ggplot2::element_line(colour = "grey90", linewidth = .25),
+                   legend.box = "vertical", legend.spacing.y = ggplot2::unit(0, "pt"),
+                   legend.margin = ggplot2::margin(2, 0, 2, 0))
+}
+
+# Axes of the effects scatterplot and bar chart: a gridline every .05 (gridLines), labelled every
+# .05 or a wider multiple when that would crowd the axis (gridBreaks). Wide
+# ranges (e.g. unstandardized effects) get gridlines at half the label step.
+gridStep <- function(limits, step = .05, max_labels = 9) {
+  span <- diff(range(limits))
+  major <- step * c(1, 2, 4, 10, 20, 40, 100, 200, 400, 1000)
+  major[c(which(span / major <= max_labels), length(major))[1]]
+}
+gridSeq <- function(limits, by)
+  by * seq(ceiling(min(limits) / by - 1e-8), floor(max(limits) / by + 1e-8))
+gridBreaks <- function(limits) gridSeq(limits, gridStep(limits))
+gridLines <- function(limits) {
+  by <- if (diff(range(limits)) / .05 <= 60) .05 else gridStep(limits) / 2
+  gridSeq(limits, by)
+}
+
+# Numbers in journal style: no leading zero (.05, -.10), 0 for zero. Used for
+# axis labels and for the numbers on the path diagram.
+noLeadingZero <- function(x, digits = NULL) {
+  # axis labels: at least 2 decimals, more if the breaks need them (.025)
+  if (is.null(digits)) {
+    ok <- vapply(2:4, function(k) all(abs(round(x, k) - x) < 1e-9, na.rm = TRUE), NA)
+    digits <- c(2:4)[c(which(ok), 3)[1]]
+  }
+  out <- formatC(x, format = "f", digits = digits)
+  out <- sub("^(-?)0\\.", "\\1.", out)
+  out <- sub("^-([.0]+)$", "\\1", out)   # -.00 rounds to zero: drop the sign
+  out[!is.na(x) & abs(x) < 1e-10] <- "0"
+  out
 }
