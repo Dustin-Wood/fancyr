@@ -1,5 +1,15 @@
 # fancyr 0.1.0
 
+## Plots for many items
+
+* `plot()` of a `reliabilitySensitivity()` result now handles any number of
+  items. With more than `max_items` (default 8), it shows what happens across
+  items instead of a coloured line per item: each item is a thin grey line,
+  with the median and middle 50% across items, and, for effects, the number
+  of items with p < .05 in each direction at each reliability. `highlight`
+  draws chosen items in colour, with their confidence intervals, on top.
+  Previously, more than 8 items exhausted the palette and gave a warning.
+
 ## Variables on very different scales
 
 * `fitModel()` (and so `stabilityPaths()`, `crossLagPaths()` and

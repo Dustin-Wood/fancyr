@@ -21,6 +21,8 @@ reliabilitySensitivity(
   effects = c("selection", "change"),
   show_controls = FALSE,
   pool = NULL,
+  highlight = NULL,
+  max_items = 8,
   ...
 )
 }
@@ -60,6 +62,18 @@ for each control's (confounded) pathway? Default \code{FALSE}.}
 control sets to draw as one panel, e.g.
 \code{list(organization = c("orgB", "orgC"))}; see
 \code{\link{stabilityPaths-methods}}.}
+
+\item{highlight}{Items to pick out: each is drawn in its own colour (with
+confidence intervals, for \code{what = "effects"}) on top of the
+all-items summary described under \code{max_items}. Setting it always
+gives that summary view.}
+
+\item{max_items}{With up to this many items (default 8), each item gets its
+own coloured line. With more, the plot shows what happens across items
+instead: each item is a thin grey line, the black line is the median
+across items, and the band holds the middle 50\% of them. For
+\code{what = "effects"}, the numbers at the top and bottom of each panel
+count the items whose effect is positive or negative with p < .05.}
 }
 \value{
 An object of class \code{fancyStabilitySensitivity}: a list with
