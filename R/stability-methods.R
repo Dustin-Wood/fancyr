@@ -319,7 +319,8 @@ print.summary.fancyStability <- function(x, digits = 3, ...) {
 #' @param ... For the path diagram, any of:
 #'   \describe{
 #'     \item{\code{item_label}}{Name written in the Y1 and Y2 nodes; defaults
-#'       to \code{item}.}
+#'       to \code{item}. Give two names to label the nodes separately, e.g.
+#'       \code{c("Y[T1]", "Y[T2]")}.}
 #'     \item{\code{x_label}, \code{control_labels}}{Display names for the
 #'       mediators and controls, in model order.}
 #'     \item{\code{show_controls}}{\code{FALSE} omits the controls from the
@@ -328,9 +329,22 @@ print.summary.fancyStability <- function(x, digits = 3, ...) {
 #'       involving Y1, to unclutter.}
 #'     \item{\code{show_estimates}, \code{show_pvalues}, \code{digits}}{What
 #'       numbers to write on the paths, and how.}
+#'     \item{\code{show_reliability}}{\code{FALSE} leaves the reliability off
+#'       the latent nodes.}
+#'     \item{\code{path_labels}}{Text for chosen paths: a named character
+#'       vector whose names give the path lavaan-style, using \code{Y1},
+#'       \code{Y2}, \code{X} (any mediator) and \code{C} (any control), or
+#'       variable names, e.g. \code{c("X ~ Y1" = "Selection effect",
+#'       "Y2 ~ X" = "Change effect", "Y2 ~ Y1" = "Residual stability")}.
+#'       Covariances use \code{~~}. With \code{show_estimates = TRUE}, the
+#'       estimate is written under the text.}
 #'     \item{\code{label_cex}, \code{title}}{Node text size; plot title.}
 #'   }
 #'   Latent variables are drawn as ellipses labelled with their reliability.
+#'   To draw the model fitted to every item rather than one item's results,
+#'   use generic labels and leave the numbers off:
+#'   \code{plot(x, item = x$settings$items[1], item_label = c("Y[T1]", "Y[T2]"),
+#'   show_estimates = FALSE, show_reliability = FALSE)}.
 #'   For the effects scatterplot: \code{xlim} and \code{ylim} (axis ranges),
 #'   \code{title}, \code{bands} (\code{TRUE}, \code{FALSE}, or a list of fits
 #'   to compute the significance bands from), \code{same_range}, and
@@ -356,6 +370,11 @@ print.summary.fancyStability <- function(x, digits = 3, ...) {
 #' plot(sp, pool = list(organization = orgs))
 #' plot(sp, what = "share", pool = list(organization = orgs))
 #' plot(sp, item = "Powerful_role", show_controls = FALSE)
+#' # the model fitted to every item, without any one item's numbers
+#' plot(sp, item = "Powerful_role", item_label = c("Y[T1]", "Y[T2]"),
+#'      show_estimates = FALSE, show_reliability = FALSE,
+#'      suppress_control_cov = TRUE,
+#'      path_labels = c("X ~ Y1" = "Selection effect", "Y2 ~ X" = "Change effect"))
 #' plot(sp, type = "effects", labels = function(i) sub("_role$", "", i))
 #' @export
 #' @importFrom graphics plot rect segments abline axis legend par text

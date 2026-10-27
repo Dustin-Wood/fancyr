@@ -10,6 +10,22 @@
   draws chosen items in colour, with their confidence intervals, on top.
   Previously, more than 8 items exhausted the palette and gave a warning.
 
+## Path diagrams and saving
+
+* The `stabilityPaths()` path diagram (`plot(x, item = )`) can draw the
+  model fitted to every item, without any one item's numbers:
+  `item_label` takes two labels (e.g. `c("Y[T1]", "Y[T2]")`), and
+  `show_reliability = FALSE` leaves the reliability off latent nodes.
+* New `path_labels` for the path diagram: text for chosen paths, named
+  lavaan-style by role or variable name, e.g.
+  `c("X ~ Y1" = "Selection effect", "Y2 ~ X" = "Change effect")`. With
+  estimates shown, the estimate goes under the text.
+* The diagram's node text is smaller by default (`label_cex = 0.85`, was
+  1.05), so it fits a page-width figure better.
+* `fancySave()` now defaults to a width of 6.5 inches, the text width of a
+  letter page with 1-inch margins, so figures go into a manuscript without
+  rescaling. Heights keep each plot's proportions.
+
 ## Variables on very different scales
 
 * `fitModel()` (and so `stabilityPaths()`, `crossLagPaths()` and

@@ -512,8 +512,28 @@ scatterplot (`plot(x, type = "effects")`). `reliabilitySensitivity()`
 results plot the effects across the grid of reliabilities, as above. The
 "Plots" sections of `?crossLagPaths` and `?stabilityPaths` list the options.
 Apart from the path diagram, the plots are ggplot2 objects: add layers or
-themes with `+`, save them with `ggplot2::ggsave()`, and find the plotted
-numbers in their `$data`.
+themes with `+`, and find the plotted numbers in their `$data`.
+
+To save a plot, use `fancySave()`. It picks a size suited to the kind of
+plot (a square panel for the scatterplot, a row per item for the bars) and
+300 dpi, and the file extension sets the format. Use PNG for slides, and PDF
+or SVG for papers, since vector files stay sharp at any size. The path
+diagram of a `stabilityPaths()` fit is drawn with base graphics, so for it
+pass a function that draws it:
+
+```{r, eval = FALSE}
+p <- plot(clLat, labels = shortName)
+fancySave(p, "effects.png")
+fancySave(p, "effects.pdf")
+fancySave(plot(clP, type = "bars", pool = list(organization = orgs)), "bars.png")
+
+# sp: a stabilityPaths() fit
+fancySave(function() plot(sp, item = "Assertive_role"), "path.png")
+```
+
+`width`, `height` and `dpi` override the defaults. Text stays the same point
+size, so a larger canvas gives crowded labels more room; `label_size` in the
+scatterplot's `plot()` call enlarges the labels themselves.
 
 ## Speeding up many fits
 

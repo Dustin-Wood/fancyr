@@ -12,9 +12,11 @@ plotMedX <- function(sp, item_label = NULL, x_label = NULL,
                      show_controls = TRUE,
                      suppress_control_cov = FALSE,
                      show_estimates = TRUE,
-                     label_cex = 1.05,
+                     label_cex = 0.85,
                      digits = 2,
                      show_pvalues = FALSE,
+                     show_reliability = TRUE,
+                     path_labels = NULL,
                      title = NULL) {
 
   # ── 1. Unpack the fitted model ──────────────────────────────────────────────
@@ -53,9 +55,11 @@ plotMedX <- function(sp, item_label = NULL, x_label = NULL,
   if (is.null(control_labels)) control_labels <- ctrl_names
   x_label <- check_labels(x_label, n_med, "x_label")
   if (is.null(x_label)) x_label <- med_names
-  item_label <- check_labels(item_label, 1, "item_label")
-  y1_disp <- if (is.null(item_label)) y1_name else item_label
-  y2_disp <- if (is.null(item_label)) y2_name else item_label
+  # one label for both nodes, or two (Time 1, Time 2), e.g. c("Y[T1]", "Y[T2]")
+  if (length(item_label) != 2)
+    item_label <- check_labels(item_label, 1, "item_label")
+  y1_disp <- if (is.null(item_label)) y1_name else item_label[1]
+  y2_disp <- if (is.null(item_label)) y2_name else item_label[length(item_label)]
 
   # ── 2. Extract path and covariance estimates ─────────────────────────────────
   cf <- sp$coefficients
@@ -103,6 +107,33 @@ plotMedX <- function(sp, item_label = NULL, x_label = NULL,
     lbl
   }
 
+  # Text labels for chosen paths, named lavaan-style by role (Y1, Y2, X for
+  # any mediator, C for any control) or by variable name, e.g.
+  # c("X ~ Y1" = "Selection effect"). A variable name beats a role.
+  tok <- c(stats::setNames("Y1", y1_name), stats::setNames("Y2", y2_name),
+           stats::setNames(rep("X", n_med), med_names),
+           stats::setNames(rep("C", n_ctrl), ctrl_names))
+  pl_keys <- gsub("\\s", "", names(path_labels))
+  pl_used <- rep(FALSE, length(path_labels))
+  custom_label <- function(lhs, op, rhs) {
+    sides <- function(l, r) c(paste0(l, op, r), paste0(l, op, tok[[r]]),
+                              paste0(tok[[l]], op, r), paste0(tok[[l]], op, tok[[r]]))
+    keys <- gsub("\\s", "", c(sides(lhs, rhs), if (op == "~~") sides(rhs, lhs)))
+    hit <- match(keys, pl_keys)
+    hit <- hit[!is.na(hit)][1]
+    if (is.na(hit)) return(NA_character_)
+    pl_used[hit] <<- TRUE
+    path_labels[[hit]]
+  }
+  # the custom label, with the estimate under it when estimates are shown
+  edge_text <- function(lhs, op, rhs, path_info) {
+    num <- if (show_estimates) fmt(path_info) else ""
+    custom <- custom_label(lhs, op, rhs)
+    if (is.na(custom)) num
+    else if (nzchar(num)) paste0(custom, "\n", num)
+    else custom
+  }
+
   # ── 4. Build node list ───────────────────────────────────────────────────────
   node_names <- c(y1_name, med_names, y2_name, ctrl_names)
   n_nodes    <- length(node_names)
@@ -116,7 +147,8 @@ plotMedX <- function(sp, item_label = NULL, x_label = NULL,
   # ── 5. Regression-only edge list (covariances drawn manually later) ───────────
   make_edge <- function(from_name, to_name, path_info) {
     if (is.na(path_info$est)) return(NULL)
-    list(edge = c(idx[from_name], idx[to_name]), label = fmt(path_info))
+    list(edge = c(idx[from_name], idx[to_name]),
+         label = edge_text(to_name, "~", from_name, path_info))
   }
 
   edge_list <- Filter(Negate(is.null), list(make_edge(y1_name, y2_name, b21)))
@@ -159,7 +191,7 @@ plotMedX <- function(sp, item_label = NULL, x_label = NULL,
     labels         = node_labels,
     # SEM convention: observed variables are boxes, latent ones ellipses
     shape          = ifelse(is.na(rel_of[node_names]), "rectangle", "ellipse"),
-    edge.labels    = if (show_estimates) elabels else FALSE,
+    edge.labels    = if (any(nzchar(elabels))) elabels else FALSE,
     edge.label.cex = 0.85,
     node.width     = 0.9,
     node.height    = 0.55,
@@ -258,7 +290,7 @@ plotMedX <- function(sp, item_label = NULL, x_label = NULL,
     arrows(bx[193], by[193], bx[200], by[200], length = 0.08,
            angle = 20, code = 2, lwd = edge_lwd, col = edge_col)
 
-    lbl <- if (show_estimates) fmt(path_info) else ""
+    lbl <- edge_text(node_a, "~~", node_b, path_info)
     if (nchar(lbl) > 0) {
       if (dir == "left")
         text(bx[100] - 0.05, by[100], lbl, cex = elab_cex, col = elab_col,
@@ -295,7 +327,7 @@ plotMedX <- function(sp, item_label = NULL, x_label = NULL,
   # overflows it rather than resizing it. Use `label_cex` to shrink text to fit.
   add_label <- function(node_name, label, font = 1) {
     ri  <- which(node_names == node_name)
-    rel <- rel_of[[node_name]]
+    rel <- if (show_reliability) rel_of[[node_name]] else NA
     # a latent node carries its assumed reliability just under its name
     y_off <- if (is.na(rel)) 0 else 0.025
     text(x      = lyt[ri, 1],
@@ -316,5 +348,8 @@ plotMedX <- function(sp, item_label = NULL, x_label = NULL,
   add_label(y2_name, y2_disp)
   for (i in seq_len(n_ctrl)) add_label(ctrl_names[i], control_labels[i])
 
+  if (!all(pl_used))
+    warning("`path_labels` not matched to any path drawn: ",
+            paste(names(path_labels)[!pl_used], collapse = ", "), call. = FALSE)
   invisible(q)
 }

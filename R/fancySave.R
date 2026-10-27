@@ -17,11 +17,13 @@
 #'   with base graphics, a function that draws it:
 #'   \code{function() plot(sp, item = "Powerful_role")}.
 #' @param file File name, with the extension giving the format.
-#' @param width,height Size in inches. By default the width is 7, and the
-#'   height suits the plot: 8.4 for the effects scatterplot (square panel
-#'   plus legend), enough room per item for the bar chart, 6 for a path
-#'   diagram (8 wide) and 5 otherwise. Text is a fixed point size, so a
-#'   larger canvas gives crowded labels more room.
+#' @param width,height Size in inches. By default the width is 6.5, the
+#'   text width of a letter page with 1-inch margins, so the figure goes into
+#'   a manuscript without rescaling and its text prints at the size drawn.
+#'   The height suits the plot: 7.8 for the effects scatterplot (square
+#'   panel plus legend), enough room per item for the bar chart, 4.9 for a
+#'   path diagram and 4.6 otherwise. Text is a fixed point size, so a larger
+#'   canvas gives crowded labels more room.
 #' @param dpi Resolution for raster files. 300 suits print; 150 is enough for
 #'   slides and the web.
 #' @param ... Passed to \code{\link[ggplot2]{ggsave}} for a ggplot.
@@ -44,12 +46,12 @@ fancySave <- function(plot, file, width = NULL, height = NULL, dpi = 300, ...) {
   isGG <- inherits(plot, "ggplot")
   if (!isGG && !is.function(plot))
     stop("`plot` must be a ggplot or, for a path diagram, a function that draws it.")
-  if (is.null(width)) width <- if (isGG) 7 else 8
-  if (is.null(height)) height <- if (!isGG) 6
-    else if (inherits(plot$coordinates, "CoordFixed")) 8.4
+  if (is.null(width)) width <- 6.5
+  if (is.null(height)) height <- if (!isGG) 4.9
+    else if (inherits(plot$coordinates, "CoordFixed")) 7.8
     else if (is.factor(plot$data$item) && !"reliability" %in% names(plot$data))
       max(4, 1.8 + .3 * nlevels(plot$data$item))   # bar chart: one row per item
-    else 5
+    else 4.6
 
   ragg <- raster && requireNamespace("ragg", quietly = TRUE)
   device <- switch(ext,
