@@ -45,7 +45,7 @@ All functions live in `R/` as individual files (one function per file, named to 
 
 **Cross-lagged (two-wave, X measured at both waves):** `crossLagPaths()` (class `fancyCrossLag`; selection `X2 ~ Y1`, change `Y2 ~ X1`, co-change `Y2 ~~ X2` left undecomposed, plus both stability decompositions) on the spec from `crossLagModel()`. Same engine as above; the spec's `extract` has an `outcome` column (`Y`/`X`) so `fitModel()` takes shares per total. `X` is a base name; `reliability` accepts that base name for both waves. Shared display helpers (`decompCells()`, `decompBars()`, `effectsScatter()`, `poolPaths()`) live in `R/stability-methods.R`. Checks: `dev/validate_crosslag.R`.
 
-Data for both: `powerTraits` (real data from Wood & Harms, 2017; built by `data-raw/powerTraits.R` from a cleaned file kept outside the package, whose cleaning script and decisions log live with the raw data on Google Drive at `G:/My Drive/From Dropbox/R/workspace/greek study data/`). Vignette: `vignettes/traits-and-power.Rmd`.
+Data for both: `powerTraits` (real data from Wood & Harms, 2017; built by `data-raw/powerTraits.R` from a cleaned file kept outside the package, whose cleaning script and decisions log live with the raw data on Google Drive at `G:/My Drive/R/workspace/greek study data/`). Vignette: `vignettes/traits-and-power.Rmd`.
 
 The package ships **no simulated data** (the user's rule): examples, vignettes and bundled datasets use real data only. Simulation is fine in `dev/` (build-ignored) for validation.
 

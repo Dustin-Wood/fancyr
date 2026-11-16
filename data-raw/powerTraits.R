@@ -11,7 +11,7 @@
 # Run from the package root:
 #   source("data-raw/powerTraits.R")
 
-src <- "G:/My Drive/From Dropbox/R/workspace/greek study data/greek data y1 & y2 cleaned.Rdata"
+src <- "G:/My Drive/R/workspace/greek study data/greek data y1 & y2 cleaned.Rdata"
 e <- new.env()
 load(src, envir = e)
 
